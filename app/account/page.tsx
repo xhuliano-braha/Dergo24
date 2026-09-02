@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { SyntheticEvent, useCallback, useEffect, useState } from 'react';
 import {
   ArrowRight,
@@ -9,6 +10,7 @@ import {
   Clock3,
   KeyRound,
   LogOut,
+  MapPin,
   PackageCheck,
   RefreshCw,
   Truck,
@@ -16,7 +18,14 @@ import {
 } from 'lucide-react';
 
 type Customer = { id: string; fullName: string; email: string; phone: string };
-type TrackingEvent = { status: string; location: string; details: string; created_at: string };
+type TrackingEvent = {
+  status: string;
+  location: string;
+  details: string;
+  latitude: number | null;
+  longitude: number | null;
+  created_at: string;
+};
 type CustomerShipment = {
   id: string;
   tracking_code: string;
@@ -96,7 +105,7 @@ export default function AccountPage() {
     <main className="min-h-screen bg-[#f3f6fa] text-[#10233d]">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-5">
-          <Link href="/" className="text-xl font-black">DËRGO<span className="text-orange-500">24</span></Link>
+          <Link href="/" aria-label="Dërgo24, faqja kryesore"><Image src="/dergo24-logo-light.svg" alt="Dërgo24" width={175} height={40} className="h-9 w-auto" /></Link>
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block"><p className="text-sm font-black">{data.customer.fullName}</p><p className="text-xs text-slate-500">{data.customer.email}</p></div>
             <button onClick={logout} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold"><LogOut className="size-4" /> Dil</button>
@@ -156,13 +165,13 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
   return (
     <main className="grid min-h-screen bg-[#071b33] lg:grid-cols-[1.1fr_.9fr]">
       <section className="hidden flex-col justify-between p-12 text-white lg:flex">
-        <Link href="/" className="text-2xl font-black">DËRGO<span className="text-orange-500">24</span></Link>
+        <Link href="/" aria-label="Dërgo24, faqja kryesore"><Image src="/dergo24-logo-dark.svg" alt="Dërgo24" width={210} height={48} className="h-11 w-auto" /></Link>
         <div className="max-w-xl"><p className="text-sm font-black uppercase tracking-[0.2em] text-orange-400">Llogaria Dergo24</p><h1 className="mt-5 text-6xl font-black leading-[1.02] tracking-tight">Pakoja jote.<br />Gjithmonë pranë.</h1><p className="mt-6 text-lg leading-8 text-slate-300">Rezervo dërgesa, shiko historikun dhe ndiq çdo ndryshim statusi nga një vend.</p></div>
         <p className="text-sm text-slate-500">Transport në çdo qytet të Shqipërisë</p>
       </section>
       <section className="grid min-h-screen place-items-center bg-white px-5 py-10 lg:rounded-l-[2.5rem]">
         <form onSubmit={submit} className="w-full max-w-md">
-          <Link href="/" className="mb-10 block text-center text-2xl font-black lg:hidden">DËRGO<span className="text-orange-500">24</span></Link>
+          <Link href="/" aria-label="Dërgo24, faqja kryesore" className="mb-10 block lg:hidden"><Image src="/dergo24-logo-light.svg" alt="Dërgo24" width={210} height={48} className="mx-auto h-11 w-auto" /></Link>
           <div className="mb-7 flex rounded-xl bg-slate-100 p-1"><button type="button" onClick={() => { setMode('login'); setError(''); }} className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-black ${mode === 'login' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Hyr</button><button type="button" onClick={() => { setMode('register'); setError(''); }} className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-black ${mode === 'register' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Krijo llogari</button></div>
           <h2 className="text-3xl font-black">{mode === 'login' ? 'Mirë se u ktheve' : 'Krijo llogarinë tënde'}</h2>
           <p className="mt-2 text-slate-500">{mode === 'login' ? 'Hyni për të parë dërgesat tuaja.' : 'Rezervimet e ardhshme lidhen automatikisht me ju.'}</p>
@@ -183,7 +192,24 @@ function ShipmentCard({ shipment }: { shipment: CustomerShipment }) {
   return (
     <article className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
       <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-start"><div><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><h3 className="mt-2 text-lg font-black">{shipment.pickup_city} <ArrowRight className="mx-1 inline size-4" /> {shipment.delivery_city}</h3><p className="mt-1 text-sm text-slate-500">Për {shipment.recipient_name} · {shipment.delivery_address}</p></div><div className="sm:text-right"><span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-200">{shipment.status}</span><p className="mt-2 font-black">{shipment.quoted_price_all} Lekë</p></div></div>
-      <div className="border-t border-slate-100 bg-slate-50 p-5"><p className="mb-4 text-xs font-black uppercase tracking-[0.16em] text-slate-400">Historiku</p><div className="space-y-4">{events.map((event, index) => <div key={`${event.created_at}-${event.status}`} className="flex gap-3"><div className={`mt-1 grid size-7 shrink-0 place-items-center rounded-full ${index === 0 ? 'bg-orange-500 text-white' : 'bg-white text-slate-400 ring-1 ring-slate-200'}`}>{index === 0 ? <CheckCircle2 className="size-4" /> : <Clock3 className="size-3" />}</div><div><p className="text-sm font-black">{event.status} · {event.location}</p><p className="mt-1 text-sm text-slate-500">{event.details}</p><p className="mt-1 text-xs text-slate-400">{formatDate(event.created_at)}</p></div></div>)}</div></div>
+      <div className="border-t border-slate-100 bg-slate-50 p-5">
+        <p className="mb-4 text-xs font-black uppercase tracking-[0.16em] text-slate-400">Historiku</p>
+        <div className="space-y-4">
+          {events.map((event, index) => (
+            <div key={`${event.created_at}-${event.status}`} className="flex gap-3">
+              <div className={`mt-1 grid size-7 shrink-0 place-items-center rounded-full ${index === 0 ? 'bg-orange-500 text-white' : 'bg-white text-slate-400 ring-1 ring-slate-200'}`}>{index === 0 ? <CheckCircle2 className="size-4" /> : <Clock3 className="size-3" />}</div>
+              <div>
+                <p className="text-sm font-black">{event.status} · {event.location}</p>
+                <p className="mt-1 text-sm text-slate-500">{event.details}</p>
+                {event.latitude !== null && event.longitude !== null && (
+                  <a href={`https://www.openstreetmap.org/?mlat=${event.latitude}&mlon=${event.longitude}#map=16/${event.latitude}/${event.longitude}`} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-black text-orange-600"><MapPin className="size-3.5" /> Shiko në hartë</a>
+                )}
+                <p className="mt-1 text-xs text-slate-400">{formatDate(event.created_at)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </article>
   );
 }

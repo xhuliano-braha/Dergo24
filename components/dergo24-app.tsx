@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight,
-  Box,
   Check,
   Headphones,
   MapPin,
@@ -86,6 +85,8 @@ type TrackingResult = {
     status: string;
     location: string;
     details: string;
+    latitude: number | null;
+    longitude: number | null;
     createdAt: string;
   }>;
 };
@@ -174,6 +175,34 @@ export function Dergo24App() {
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('book') !== '1') return;
     const timeout = window.setTimeout(() => setBookingOpen(true), 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('tracking');
+    if (!code) return;
+    const timeout = window.setTimeout(async () => {
+      setTrackingCode(code.toUpperCase());
+      setTrackingLoading(true);
+      setTrackingError('');
+      try {
+        const response = await fetch(
+          `/api/shipments?tracking=${encodeURIComponent(code)}`,
+        );
+        const data = (await response.json()) as TrackingResult & {
+          error?: string;
+        };
+        if (!response.ok) throw new Error(data.error);
+        setTracking(data);
+      } catch (lookupError) {
+        setTrackingError(
+          lookupError instanceof Error ? lookupError.message : 'Provo përsëri.',
+        );
+      } finally {
+        setTrackingLoading(false);
+        document.querySelector('#gjurmo')?.scrollIntoView();
+      }
+    }, 0);
     return () => window.clearTimeout(timeout);
   }, []);
 
@@ -290,7 +319,7 @@ export function Dergo24App() {
               Gjurmo pakon
             </Button>
             <Button
-              className="h-11 rounded-xl px-5 shadow-[0_8px_24px_rgba(215,45,40,.2)]"
+              className="h-11 rounded-xl px-5 shadow-[0_8px_24px_rgba(244,90,10,.22)]"
               onClick={() => setBookingOpen(true)}
             >
               Dërgo tani <ArrowRight />
@@ -450,6 +479,16 @@ export function Dergo24App() {
                       <p className="mt-1 text-sm text-white/55">
                         {item.details}
                       </p>
+                      {item.latitude !== null && item.longitude !== null && (
+                        <a
+                          href={`https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=16/${item.latitude}/${item.longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-orange-300 hover:text-orange-200"
+                        >
+                          <MapPin className="size-3.5" /> Shiko pozicionin në hartë
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -644,10 +683,28 @@ export function Dergo24App() {
         </div>
       </section>
 
+      <section className="bg-white py-24">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <SectionTitle
+            eyebrow="Ekipi Dergo24"
+            title="Nga marrja deri te buzëqeshja."
+            copy="Automjete dhe korrierë të identifikueshëm, kujdes në ngarkim dhe dorëzim direkt në adresë."
+          />
+          <div className="mt-12 grid gap-5 md:grid-cols-2">
+            <div className="overflow-hidden rounded-3xl bg-[#071b33]">
+              <Image src="/dergo24-loading.jpeg" alt="Ekipi Dërgo24 ngarkon porositë në automjet" width={1024} height={1280} className="h-[560px] w-full object-cover" />
+            </div>
+            <div className="overflow-hidden rounded-3xl bg-[#071b33]">
+              <Image src="/dergo24-smile-delivery.jpeg" alt="Korrieri Dërgo24 dorëzon porosinë te klienti" width={1024} height={1280} className="h-[560px] w-full object-cover" />
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer id="kontakt" className="bg-[#05152c] py-14 text-white">
         <div className="mx-auto grid max-w-7xl gap-10 px-5 lg:grid-cols-[1.4fr_1fr_1fr] lg:px-8">
           <div>
-            <Logo />
+            <Logo dark />
             <p className="mt-5 max-w-sm leading-7 text-white/45">
               Partneri yt për transport të shpejtë dhe të besueshëm në çdo qytet
               të Shqipërisë.
@@ -1039,16 +1096,16 @@ function QuoteModal({
   );
 }
 
-function Logo() {
+function Logo({ dark = false }: { dark?: boolean }) {
   return (
-    <>
-      <span className="grid size-10 place-items-center rounded-xl bg-primary text-white">
-        <Box className="size-5" />
-      </span>
-      <span className="text-xl font-black tracking-[-.04em]">
-        DËRGO<span className="text-primary">24</span>
-      </span>
-    </>
+    <Image
+      src={dark ? '/dergo24-logo-dark.svg' : '/dergo24-logo-light.svg'}
+      alt="Dërgo24"
+      width={210}
+      height={48}
+      className="h-10 w-auto"
+      priority
+    />
   );
 }
 function Trust({ children }: { children: React.ReactNode }) {

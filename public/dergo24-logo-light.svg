@@ -1,0 +1,12 @@
+<svg width="420" height="96" viewBox="0 0 420 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Dërgo24</title>
+  <g fill="#F45A0A">
+    <path d="M8 22h76l-10 12H18L8 22Z"/>
+    <path d="M18 40h58L66 52H28L18 40Z"/>
+    <path d="M28 58h40L58 70H38L28 58Z"/>
+  </g>
+  <g transform="skewX(-8)">
+    <text x="88" y="68" fill="#071B33" font-family="Arial Black, Arial, sans-serif" font-size="54" font-weight="900" letter-spacing="-3">DËRGO</text>
+    <text x="306" y="68" fill="#F45A0A" font-family="Arial Black, Arial, sans-serif" font-size="54" font-weight="900" letter-spacing="-3">24</text>
+  </g>
+</svg>

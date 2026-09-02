@@ -18,6 +18,8 @@ export const shipmentUpdateSchema = z.object({
   driverId: z.uuid().nullable(),
   location: z.string().trim().min(2).max(100),
   details: z.string().trim().min(3).max(300),
+  latitude: z.number().min(-90).max(90).nullable(),
+  longitude: z.number().min(-180).max(180).nullable(),
 });
 
 export const driverCreateSchema = z.object({

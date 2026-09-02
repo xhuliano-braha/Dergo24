@@ -2,13 +2,16 @@
 
 import { SyntheticEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowRight,
   Box,
   CheckCircle2,
   Clock3,
   LogOut,
+  LocateFixed,
   Menu,
+  MessageCircle,
   PackageCheck,
   RefreshCw,
   Search,
@@ -205,9 +208,7 @@ export default function StaffPage() {
             >
               <Menu className="size-5" />
             </button>
-            <Link href="/" className="text-xl font-black tracking-tight text-[#071b33]">
-              DËRGO<span className="text-orange-500">24</span>
-            </Link>
+            <Link href="/" aria-label="Dërgo24, faqja kryesore"><Image src="/dergo24-logo-light.svg" alt="Dërgo24" width={175} height={40} className="h-9 w-auto" /></Link>
             <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500 sm:inline">
               PANELI I STAFIT
             </span>
@@ -332,7 +333,7 @@ function LoginScreen({ onLogin, initialError }: { onLogin: () => Promise<void>; 
   return (
     <main className="grid min-h-screen bg-[#071b33] lg:grid-cols-2">
       <section className="hidden min-h-screen flex-col justify-between overflow-hidden p-12 text-white lg:flex">
-        <Link href="/" className="text-2xl font-black">DËRGO<span className="text-orange-500">24</span></Link>
+        <Link href="/" aria-label="Dërgo24, faqja kryesore"><Image src="/dergo24-logo-dark.svg" alt="Dërgo24" width={210} height={48} className="h-11 w-auto" /></Link>
         <div className="max-w-xl">
           <p className="mb-5 text-sm font-bold uppercase tracking-[0.2em] text-orange-400">Qendra operative</p>
           <h1 className="text-6xl font-black leading-[1.02] tracking-tight">Çdo dërgesë.<br />Një pamje e qartë.</h1>
@@ -342,7 +343,7 @@ function LoginScreen({ onLogin, initialError }: { onLogin: () => Promise<void>; 
       </section>
       <section className="grid min-h-screen place-items-center bg-white px-5 py-12 lg:rounded-l-[2.5rem]">
         <form onSubmit={submit} className="w-full max-w-md">
-          <Link href="/" className="mb-12 block text-center text-2xl font-black text-[#071b33] lg:hidden">DËRGO<span className="text-orange-500">24</span></Link>
+          <Link href="/" aria-label="Dërgo24, faqja kryesore" className="mb-12 block lg:hidden"><Image src="/dergo24-logo-light.svg" alt="Dërgo24" width={210} height={48} className="mx-auto h-11 w-auto" /></Link>
           <div className="mb-8 grid size-14 place-items-center rounded-2xl bg-orange-500 text-white"><ShieldCheck className="size-7" /></div>
           <h2 className="text-3xl font-black tracking-tight">Hyr në panel</h2>
           <p className="mt-2 text-slate-500">Vetëm për stafin e autorizuar të Dergo24.</p>
@@ -443,17 +444,42 @@ function ShipmentDialog({ shipment, drivers, onClose, onUpdated }: { shipment: S
   const [driverId, setDriverId] = useState(shipment.driver_id ?? '');
   const [location, setLocation] = useState(shipment.delivery_city);
   const [details, setDetails] = useState('Statusi i dërgesës u përditësua nga stafi i Dergo24.');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [locating, setLocating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   async function save(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError('');
     try {
-      await apiRequest(`/api/staff/shipments/${shipment.id}`, { method: 'PATCH', body: JSON.stringify({ status, driverId: driverId || null, location, details }) });
+      await apiRequest(`/api/staff/shipments/${shipment.id}`, { method: 'PATCH', body: JSON.stringify({ status, driverId: driverId || null, location, details, latitude, longitude }) });
       await onUpdated();
     } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Veprimi dështoi.'); }
     finally { setSaving(false); }
   }
+
+  function captureLocation() {
+    setLocating(true);
+    setError('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(position.coords.latitude);
+        setLongitude(position.coords.longitude);
+        setLocating(false);
+      },
+      () => {
+        setError('Vendndodhja nuk u lexua. Lejoni aksesin GPS në shfletues.');
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 12000 },
+    );
+  }
+
+  const whatsappPhone = shipment.recipient_phone.replace(/\D/g, '').replace(/^0/, '355');
+  const whatsappText = encodeURIComponent(
+    `Përshëndetje ${shipment.recipient_name}, dërgesa juaj ${shipment.tracking_code} është: ${status}. Ndiqeni këtu: https://dergo24-albania.traveleuro6.chatgpt.site/?tracking=${shipment.tracking_code}`,
+  );
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-end bg-[#071b33]/70 p-0 backdrop-blur-sm md:place-items-center md:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
@@ -464,9 +490,16 @@ function ShipmentDialog({ shipment, drivers, onClose, onUpdated }: { shipment: S
           <FormField label="Statusi"><select value={status} onChange={(event) => setStatus(event.target.value)} className="form-control">{shipmentStatuses.map((item) => <option key={item}>{item}</option>)}</select></FormField>
           <FormField label="Korrieri"><select value={driverId} onChange={(event) => setDriverId(event.target.value)} className="form-control"><option value="">Pa korrier</option>{drivers.filter((driver) => driver.active).map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name} · {driver.phone}</option>)}</select></FormField>
           <FormField label="Vendndodhja"><input value={location} onChange={(event) => setLocation(event.target.value)} className="form-control" required /></FormField>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+              <div><p className="text-sm font-black">Pozicioni GPS</p><p className="mt-1 text-xs text-slate-500">{latitude && longitude ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` : 'Ende pa koordinata'}</p></div>
+              <button type="button" onClick={captureLocation} disabled={locating} className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-black ring-1 ring-slate-200"><LocateFixed className="size-4" /> {locating ? 'Duke lexuar...' : 'Përdor vendndodhjen'}</button>
+            </div>
+          </div>
           <FormField label="Shënimi që sheh klienti"><textarea value={details} onChange={(event) => setDetails(event.target.value)} className="form-control min-h-24 resize-y" required /></FormField>
           {error && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
           <button disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 font-black text-white hover:bg-orange-600 disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <><CheckCircle2 className="size-5" /> Ruaj dhe njofto gjurmimin</>}</button>
+          <a href={`https://wa.me/${whatsappPhone}?text=${whatsappText}`} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#20b85a] px-5 py-3.5 font-black text-white"><MessageCircle className="size-5" /> Njofto marrësin në WhatsApp</a>
         </form>
       </dialog>
     </div>
@@ -496,6 +529,10 @@ function QuoteCard({ quote, onUpdated }: { quote: Quote; onUpdated: () => Promis
     catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Veprimi dështoi.'); }
     finally { setSaving(false); }
   }
+  const whatsappPhone = quote.phone.replace(/\D/g, '').replace(/^0/, '355');
+  const whatsappText = encodeURIComponent(
+    `Përshëndetje ${quote.customer_name}, kërkesa juaj ${quote.reference_code} për transport nga ${quote.pickup_city} në ${quote.delivery_city}${price ? ` ka ofertën ${price} Lekë` : ' po shqyrtohet nga Dergo24'}.`,
+  );
   return (
     <section className="rounded-2xl border border-slate-200 p-5">
       <div className="flex items-start justify-between gap-3"><div><p className="font-mono text-xs font-black text-orange-600">{quote.reference_code}</p><h3 className="mt-1 text-lg font-black">{quote.customer_name}</h3><a href={`tel:${quote.phone}`} className="text-sm font-bold text-blue-600">{quote.phone}</a></div><span className={`rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${statusTone(quote.status)}`}>{quoteStatuses.find(([value]) => value === quote.status)?.[1]}</span></div>
@@ -505,6 +542,7 @@ function QuoteCard({ quote, onUpdated }: { quote: Quote; onUpdated: () => Promis
       <div className="mt-5 grid gap-3 sm:grid-cols-2"><select value={status} onChange={(event) => setStatus(event.target.value as Quote['status'])} className="form-control">{quoteStatuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><input type="number" min="1" value={price} onChange={(event) => setPrice(event.target.value)} className="form-control" placeholder="Çmimi në Lekë" /></div>
       {error && <p className="mt-3 text-sm font-semibold text-red-600">{error}</p>}
       <button onClick={save} disabled={saving} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#071b33] px-4 py-3 text-sm font-black text-white disabled:opacity-60">{saving ? <RefreshCw className="size-4 animate-spin" /> : 'Ruaj ofertën'}</button>
+      <a href={`https://wa.me/${whatsappPhone}?text=${whatsappText}`} target="_blank" rel="noreferrer" className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#20b85a] px-4 py-3 text-sm font-black text-white"><MessageCircle className="size-4" /> Dërgo në WhatsApp</a>
     </section>
   );
 }

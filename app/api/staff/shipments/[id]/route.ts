@@ -48,6 +48,8 @@ export async function PATCH(
     status: parsed.data.status,
     location: parsed.data.location,
     details: parsed.data.details,
+    latitude: parsed.data.latitude,
+    longitude: parsed.data.longitude,
     created_by: staff.id,
     created_at: now,
   });

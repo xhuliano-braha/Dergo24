@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     const { data: events, error: eventsError } = await supabase
       .from('tracking_events')
-      .select('status, location, details, created_at')
+      .select('status, location, details, latitude, longitude, created_at')
       .eq('shipment_id', shipment.id)
       .order('created_at', { ascending: false });
 
@@ -58,6 +58,8 @@ export async function GET(request: NextRequest) {
         status: event.status,
         location: event.location,
         details: event.details,
+        latitude: event.latitude,
+        longitude: event.longitude,
         createdAt: event.created_at,
       })),
     });
