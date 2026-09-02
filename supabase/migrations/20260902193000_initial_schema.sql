@@ -85,3 +85,11 @@ alter table public.vehicles enable row level security;
 alter table public.shipments enable row level security;
 alter table public.tracking_events enable row level security;
 alter table public.quote_requests enable row level security;
+
+grant usage on schema public to service_role;
+grant select, insert, update, delete on table public.staff_profiles to service_role;
+grant select, insert, update, delete on table public.drivers to service_role;
+grant select, insert, update, delete on table public.vehicles to service_role;
+grant select, insert, update, delete on table public.shipments to service_role;
+grant select, insert, update, delete on table public.tracking_events to service_role;
+grant select, insert, update, delete on table public.quote_requests to service_role;
