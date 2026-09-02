@@ -80,4 +80,7 @@
       linear-gradient(90deg, oklch(0.86 0.01 65 / 35%) 1px, transparent 1px);
     background-size: 32px 32px;
   }
+  .form-control {
+    @apply w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:bg-white focus:ring-4 focus:ring-orange-100;
+  }
 }
