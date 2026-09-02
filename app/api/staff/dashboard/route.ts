@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   if (!staff) return unauthorizedResponse();
 
   const supabase = getSupabaseAdmin();
-  const [shipmentsResult, quotesResult, driversResult] = await Promise.all([
+  const [shipmentsResult, quotesResult, driversResult, staffResult] = await Promise.all([
     supabase
       .from('shipments')
       .select(
@@ -31,10 +31,17 @@ export async function GET(request: NextRequest) {
       .from('drivers')
       .select('id, full_name, phone, status, active, created_at')
       .order('full_name'),
+    supabase
+      .from('staff_profiles')
+      .select('id, full_name, email, role, active, created_at')
+      .order('full_name'),
   ]);
 
   const error =
-    shipmentsResult.error ?? quotesResult.error ?? driversResult.error;
+    shipmentsResult.error ??
+    quotesResult.error ??
+    driversResult.error ??
+    staffResult.error;
   if (error)
     return NextResponse.json(
       { error: 'Të dhënat nuk mund të ngarkoheshin.' },
@@ -46,5 +53,6 @@ export async function GET(request: NextRequest) {
     shipments: shipmentsResult.data ?? [],
     quotes: quotesResult.data ?? [],
     drivers: driversResult.data ?? [],
+    staffAccounts: staffResult.data ?? [],
   });
 }

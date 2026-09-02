@@ -12,12 +12,17 @@ import {
   PackageCheck,
   RefreshCw,
   Search,
+  Settings,
   ShieldCheck,
   Truck,
   UserPlus,
   Users,
   X,
 } from 'lucide-react';
+import {
+  StaffAccount,
+  StaffSettingsPanel,
+} from '@/components/staff-settings-panel';
 
 type Staff = {
   id: string;
@@ -74,6 +79,7 @@ type DashboardData = {
   shipments: Shipment[];
   quotes: Quote[];
   drivers: Driver[];
+  staffAccounts: StaffAccount[];
 };
 
 const shipmentStatuses = [
@@ -135,7 +141,9 @@ export default function StaffPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState<'shipments' | 'quotes' | 'drivers'>('shipments');
+  const [tab, setTab] = useState<
+    'shipments' | 'quotes' | 'drivers' | 'settings'
+  >('shipments');
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
@@ -177,6 +185,7 @@ export default function StaffPage() {
     { id: 'shipments' as const, label: 'Dërgesat', icon: Box, count: data.shipments.length },
     { id: 'quotes' as const, label: 'Ofertat', icon: Clock3, count: data.quotes.filter((quote) => quote.status === 'new').length },
     { id: 'drivers' as const, label: 'Korrierët', icon: Users, count: data.drivers.filter((driver) => driver.active).length },
+    { id: 'settings' as const, label: 'Stafi & siguria', icon: Settings, count: data.staffAccounts.filter((account) => account.active).length },
   ];
 
   async function logout() {
@@ -273,6 +282,14 @@ export default function StaffPage() {
           {tab === 'quotes' && <QuotesPanel quotes={data.quotes} onUpdated={loadDashboard} />}
           {tab === 'drivers' && (
             <DriversPanel drivers={data.drivers} staff={data.staff} onUpdated={loadDashboard} />
+          )}
+          {tab === 'settings' && (
+            <StaffSettingsPanel
+              currentStaff={data.staff}
+              accounts={data.staffAccounts}
+              onUpdated={loadDashboard}
+              onPasswordChanged={() => setData(null)}
+            />
           )}
         </section>
       </div>

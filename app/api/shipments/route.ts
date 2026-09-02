@@ -5,6 +5,7 @@ import {
   createTrackingCode,
   shipmentSchema,
 } from '@/lib/shipments';
+import { getAuthenticatedCustomer } from '@/lib/customer-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,8 @@ export async function GET(request: NextRequest) {
         createdAt: event.created_at,
       })),
     });
-  } catch {
+  } catch (error) {
+    console.error('Shipment tracking failed', error);
     return NextResponse.json(
       { error: 'Shërbimi i gjurmimit nuk është përkohësisht i disponueshëm.' },
       { status: 503 },
@@ -78,6 +80,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdmin();
+    const customer = await getAuthenticatedCustomer(request);
     const input = parsed.data;
     const shipmentId = crypto.randomUUID();
     const trackingCode = createTrackingCode();
@@ -99,6 +102,7 @@ export async function POST(request: NextRequest) {
       weight_kg: input.weight,
       service: input.service,
       status,
+      customer_id: customer?.id ?? null,
       quoted_price_all: price,
       created_at: createdAt,
       updated_at: createdAt,
@@ -122,7 +126,8 @@ export async function POST(request: NextRequest) {
       { trackingCode, price, status, createdAt },
       { status: 201 },
     );
-  } catch {
+  } catch (error) {
+    console.error('Shipment booking failed', error);
     return NextResponse.json(
       { error: 'Rezervimi nuk mund të ruhej. Provoni përsëri.' },
       { status: 503 },

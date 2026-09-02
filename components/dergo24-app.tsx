@@ -2,6 +2,7 @@
 
 import { SyntheticEvent, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   ArrowRight,
   Box,
@@ -14,6 +15,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  UserRound,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -169,6 +171,12 @@ export function Dergo24App() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('book') !== '1') return;
+    const timeout = window.setTimeout(() => setBookingOpen(true), 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
   async function trackShipment(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!trackingCode.trim()) return;
@@ -268,6 +276,12 @@ export function Dergo24App() {
             <a href="#kontakt">Kontakt</a>
           </nav>
           <div className="hidden items-center gap-3 lg:flex">
+            <Link
+              href="/account"
+              className="flex h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold hover:bg-slate-100"
+            >
+              <UserRound className="size-4" /> Llogaria ime
+            </Link>
             <Button
               variant="ghost"
               className="h-11 px-4"
@@ -302,6 +316,9 @@ export function Dergo24App() {
               <a href="#mbulim" onClick={() => setMenuOpen(false)}>
                 Mbulimi
               </a>
+              <Link href="/account" onClick={() => setMenuOpen(false)}>
+                Llogaria ime
+              </Link>
               <Button
                 className="mt-2 h-11"
                 onClick={() => setBookingOpen(true)}
