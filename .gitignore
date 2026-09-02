@@ -19,6 +19,8 @@
 # misc
 .DS_Store
 *.pem
+dergo24-site.tar.gz
+WhatsApp Image*.jpeg
 
 # debug
 npm-debug.log*
