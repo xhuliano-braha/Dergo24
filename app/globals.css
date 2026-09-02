@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background); --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans); --font-mono: var(--font-geist-mono);
+  --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
+  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
+  --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground);
+  --color-destructive: var(--destructive);
+  --radius-sm: calc(var(--radius) * .65); --radius-md: calc(var(--radius) * .8);
+  --radius-lg: var(--radius); --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8); --radius-3xl: calc(var(--radius) * 2.2);
+}
+
+:root {
+  --background: oklch(.985 .006 75); --foreground: oklch(.18 .014 35);
+  --card: oklch(1 0 0); --card-foreground: oklch(.18 .014 35);
+  --popover: oklch(1 0 0); --popover-foreground: oklch(.18 .014 35);
+  --primary: oklch(.56 .225 28); --primary-foreground: oklch(.99 0 0);
+  --secondary: oklch(.94 .011 65); --secondary-foreground: oklch(.23 .018 35);
+  --muted: oklch(.95 .007 70); --muted-foreground: oklch(.5 .018 45);
+  --accent: oklch(.91 .04 65); --accent-foreground: oklch(.27 .03 42);
+  --destructive: oklch(.56 .22 25); --border: oklch(.89 .012 65);
+  --input: oklch(.88 .012 65); --ring: oklch(.56 .225 28); --radius: .85rem;
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-background text-foreground antialiased; }
+  ::selection { background: oklch(.82 .11 35 / 35%); }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .paper-grid { background-image: linear-gradient(oklch(.86 .01 65 / 35%) 1px, transparent 1px), linear-gradient(90deg, oklch(.86 .01 65 / 35%) 1px, transparent 1px); background-size: 32px 32px; }
+}
