@@ -173,13 +173,14 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
   const [form, setForm] = useState({ fullName: '', phone: '', email: '', password: '' });
   const [error, setError] = useState(initialError);
   const [saving, setSaving] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError('');
     try {
       await apiRequest(mode === 'login' ? '/api/account/auth' : '/api/account/register', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, acceptedTerms: mode === 'register' ? acceptedTerms : undefined }),
       });
       await onSuccess();
     } catch (submitError) {
@@ -203,8 +204,9 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
           {mode === 'register' && <><Field id="customer-name" label="Emri i plotë"><input id="customer-name" value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} className="form-control" required /></Field><Field id="customer-phone" label="Telefoni"><input id="customer-phone" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="form-control" placeholder="+355 69..." required /></Field></>}
           <Field id="customer-email" label="Email"><input id="customer-email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="form-control" autoComplete="email" required /></Field>
           <Field id="customer-password" label="Fjalëkalimi"><input id="customer-password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="form-control" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required /></Field>
+          {mode === 'register' && <label className="mt-5 flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 size-4 accent-orange-500" required /><span>Pranoj <Link href="/terms" target="_blank" className="font-black text-orange-600 underline">kushtet</Link> dhe <Link href="/privacy" target="_blank" className="font-black text-orange-600 underline">privatësinë</Link>.</span></label>}
           {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
-          <button disabled={saving} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 font-black text-white disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <>{mode === 'login' ? 'Hyr në llogari' : 'Krijo llogari'} <ArrowRight className="size-5" /></>}</button>
+          <button disabled={saving || (mode === 'register' && !acceptedTerms)} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 font-black text-white disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <>{mode === 'login' ? 'Hyr në llogari' : 'Krijo llogari'} <ArrowRight className="size-5" /></>}</button>
           <Link href="/" className="mt-6 block text-center text-sm font-bold text-slate-500">Kthehu te faqja kryesore</Link>
         </form>
       </section>

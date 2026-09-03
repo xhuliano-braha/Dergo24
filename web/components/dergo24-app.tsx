@@ -813,7 +813,7 @@ export function Dergo24App() {
         </div>
         <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-3 border-t border-white/10 px-5 pt-7 text-xs text-white/30 sm:flex-row sm:justify-between lg:px-8">
           <p>© 2026 Dergo24. Të gjitha të drejtat të rezervuara.</p>
-          <p>Kushtet · Privatësia</p>
+          <div className="flex flex-wrap gap-4"><Link href="/terms" className="hover:text-white">Kushtet</Link><Link href="/privacy" className="hover:text-white">Privatësia</Link><Link href="/claims-policy" className="hover:text-white">Ankesat</Link></div>
         </div>
       </footer>
 
@@ -879,6 +879,7 @@ function BookingModal({
   const [pickupPoints, setPickupPoints] = useState<Array<{ id: string; name: string; city: string; address: string; opening_hours: string }>>([]);
   const [addressMessage, setAddressMessage] = useState('');
   const [addressValid, setAddressValid] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     void fetch('/api/pickup-points').then(async (response) => {
@@ -1065,6 +1066,10 @@ function BookingModal({
                 {error}
               </p>
             )}
+            <label className="mt-5 flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 size-4 accent-orange-500" required />
+              <span>Pranoj <Link href="/terms" target="_blank" className="font-black text-orange-600 underline">kushtet e shërbimit</Link>, <Link href="/privacy" target="_blank" className="font-black text-orange-600 underline">politikën e privatësisë</Link> dhe <Link href="/claims-policy" target="_blank" className="font-black text-orange-600 underline">rregullat e ankesave</Link>.</span>
+            </label>
             <div className="mt-7 flex flex-col gap-4 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1074,7 +1079,7 @@ function BookingModal({
               </div>
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !acceptedTerms}
                 className="h-12 rounded-xl px-7 font-bold"
               >
                 {loading ? 'Duke rezervuar...' : 'Konfirmo dërgesën'}{' '}

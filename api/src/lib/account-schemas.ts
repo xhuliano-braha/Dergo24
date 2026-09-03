@@ -8,6 +8,7 @@ export const customerLoginSchema = z.object({
 export const customerRegisterSchema = customerLoginSchema.extend({
   fullName: z.string().trim().min(2).max(80),
   phone: z.string().trim().regex(/^\+?[0-9 ]{8,16}$/),
+  acceptedTerms: z.literal(true),
 });
 
 export const passwordChangeSchema = z.object({

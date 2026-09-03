@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
       full_name: parsed.data.fullName,
       email: parsed.data.email.toLowerCase(),
       phone: parsed.data.phone,
+      terms_accepted_at: new Date().toISOString(),
+      privacy_accepted_at: new Date().toISOString(),
     });
   if (profileError) {
     await admin.auth.admin.deleteUser(created.user.id);

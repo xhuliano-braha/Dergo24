@@ -205,6 +205,10 @@ export default function StaffPage() {
     setError('');
     try {
       const nextData = await apiRequest<DashboardData>('/api/staff/dashboard');
+      if (nextData.staff.role === 'courier') {
+        window.location.replace('/courier');
+        return;
+      }
       setData(nextData);
     } catch (loadError) {
       setData(null);
