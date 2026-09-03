@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CopyTrackingButton } from '@/components/copy-tracking-button';
 
 const cities = [
   'Tiranë',
@@ -493,9 +494,7 @@ export function Dergo24App() {
           {tracking && (
             <div className="mt-7 grid gap-5 border-t border-white/10 pt-7 lg:grid-cols-[.8fr_1.2fr]">
               <div>
-                <p className="font-mono text-sm text-white/50">
-                  {tracking.shipment.trackingCode}
-                </p>
+                <div className="flex items-center gap-2"><p className="font-mono text-sm text-white/50">{tracking.shipment.trackingCode}</p><CopyTrackingButton value={tracking.shipment.trackingCode} compact dark /></div>
                 <p className="mt-2 text-2xl font-bold">
                   {tracking.shipment.status}
                 </p>
@@ -911,6 +910,7 @@ function BookingModal({
               <p className="mt-2 font-mono text-xl font-bold">
                 {booking.trackingCode}
               </p>
+              <CopyTrackingButton value={booking.trackingCode} className="mt-3" />
               <p className="mt-3 text-sm">
                 Çmimi: <strong>{booking.price} Lekë</strong>
               </p>

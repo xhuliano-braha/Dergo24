@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { SyntheticEvent, useCallback, useEffect, useState } from 'react';
+import { SyntheticEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Box,
@@ -13,9 +13,11 @@ import {
   MapPin,
   PackageCheck,
   RefreshCw,
+  Search,
   Truck,
   UserRound,
 } from 'lucide-react';
+import { CopyTrackingButton } from '@/components/copy-tracking-button';
 
 type Customer = { id: string; fullName: string; email: string; phone: string };
 type TrackingEvent = {
@@ -69,6 +71,17 @@ export default function AccountPage() {
   const [data, setData] = useState<AccountData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+
+  const filteredShipments = useMemo(() => {
+    if (!data) return [];
+    const query = search.trim().toLowerCase();
+    if (!query) return data.shipments;
+    return data.shipments.filter((shipment) =>
+      [shipment.tracking_code, shipment.recipient_name, shipment.pickup_city, shipment.delivery_city, shipment.delivery_address, shipment.status]
+        .some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [data, search]);
 
   const loadAccount = useCallback(async () => {
     setLoading(true);
@@ -130,11 +143,12 @@ export default function AccountPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <section className="space-y-4">
-            <h2 className="text-2xl font-black">Dërgesat e mia</h2>
-            {data.shipments.map((shipment) => <ShipmentCard key={shipment.id} shipment={shipment} />)}
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><h2 className="text-2xl font-black">Dërgesat e mia</h2><label className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200 sm:w-72"><Search className="size-4 text-slate-400" /><input aria-label="Kërko dërgesat e mia" value={search} onChange={(event) => setSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Kod, qytet, marrës..." /></label></div>
+            {filteredShipments.map((shipment) => <ShipmentCard key={shipment.id} shipment={shipment} />)}
             {!data.shipments.length && (
               <div className="grid min-h-64 place-items-center rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center"><div><Box className="mx-auto mb-4 size-10 text-slate-300" /><h3 className="font-black">Ende nuk ka dërgesa</h3><p className="mt-2 text-sm text-slate-500">Hyni në llogari përpara rezervimit dhe pakoja do të shfaqet këtu.</p></div></div>
             )}
+            {data.shipments.length > 0 && !filteredShipments.length && <div className="grid min-h-40 place-items-center rounded-2xl border border-dashed border-slate-300 bg-white text-sm font-bold text-slate-400">Nuk u gjet asnjë dërgesë.</div>}
           </section>
           <aside className="space-y-5">
             <section className="rounded-2xl bg-[#071b33] p-6 text-white"><UserRound className="mb-4 size-7 text-orange-400" /><h2 className="text-xl font-black">Të dhënat e mia</h2><dl className="mt-4 space-y-3 text-sm"><div><dt className="text-slate-400">Emri</dt><dd className="font-bold">{data.customer.fullName}</dd></div><div><dt className="text-slate-400">Telefoni</dt><dd className="font-bold">{data.customer.phone}</dd></div><div><dt className="text-slate-400">Email</dt><dd className="break-all font-bold">{data.customer.email}</dd></div></dl></section>
@@ -194,7 +208,7 @@ function ShipmentCard({ shipment }: { shipment: CustomerShipment }) {
   const events = [...shipment.tracking_events].sort((first, second) => +new Date(second.created_at) - +new Date(first.created_at));
   return (
     <article className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-      <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-start"><div><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><h3 className="mt-2 text-lg font-black">{shipment.pickup_city} <ArrowRight className="mx-1 inline size-4" /> {shipment.delivery_city}</h3><p className="mt-1 text-sm text-slate-500">Për {shipment.recipient_name} · {shipment.delivery_address}</p>{shipment.delivery_proofs && <p className="mt-2 text-xs font-black text-emerald-700">Marrë nga {shipment.delivery_proofs.recipient_name} më {formatDate(shipment.delivery_proofs.delivered_at)}</p>}</div><div className="sm:text-right"><span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-200">{shipment.status}</span><p className="mt-2 font-black">{shipment.quoted_price_all} Lekë</p>{shipment.cod_amount_all > 0 && <p className="mt-1 text-xs font-black text-orange-600">COD {shipment.cod_amount_all} Lekë · {shipment.cod_status}</p>}</div></div>
+      <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-start"><div><div className="flex items-center gap-2"><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><CopyTrackingButton value={shipment.tracking_code} compact /></div><h3 className="mt-2 text-lg font-black">{shipment.pickup_city} <ArrowRight className="mx-1 inline size-4" /> {shipment.delivery_city}</h3><p className="mt-1 text-sm text-slate-500">Për {shipment.recipient_name} · {shipment.delivery_address}</p>{shipment.delivery_proofs && <p className="mt-2 text-xs font-black text-emerald-700">Marrë nga {shipment.delivery_proofs.recipient_name} më {formatDate(shipment.delivery_proofs.delivered_at)}</p>}</div><div className="sm:text-right"><span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-200">{shipment.status}</span><p className="mt-2 font-black">{shipment.quoted_price_all} Lekë</p>{shipment.cod_amount_all > 0 && <p className="mt-1 text-xs font-black text-orange-600">COD {shipment.cod_amount_all} Lekë · {shipment.cod_status}</p>}</div></div>
       <div className="border-t border-slate-100 bg-slate-50 p-5">
         <p className="mb-4 text-xs font-black uppercase tracking-[0.16em] text-slate-400">Historiku</p>
         <div className="space-y-4">

@@ -30,6 +30,7 @@ import {
   StaffAccount,
   StaffSettingsPanel,
 } from '@/components/staff-settings-panel';
+import { CopyTrackingButton } from '@/components/copy-tracking-button';
 
 type Staff = {
   id: string;
@@ -433,7 +434,7 @@ function ShipmentsPanel({ shipments, search, setSearch, onSelect }: { shipments:
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
     if (!query) return shipments;
-    return shipments.filter((shipment) => [shipment.tracking_code, shipment.sender_name, shipment.recipient_name, shipment.pickup_city, shipment.delivery_city, shipment.status].some((value) => value.toLowerCase().includes(query)));
+    return shipments.filter((shipment) => [shipment.id, shipment.tracking_code, shipment.sender_name, shipment.sender_phone, shipment.recipient_name, shipment.recipient_phone, shipment.pickup_city, shipment.delivery_city, shipment.delivery_address, shipment.status].some((value) => value.toLowerCase().includes(query)));
   }, [search, shipments]);
 
   return (
@@ -441,7 +442,7 @@ function ShipmentsPanel({ shipments, search, setSearch, onSelect }: { shipments:
       <PanelHeader eyebrow="Fluksi i dërgesave" title={`${filtered.length} dërgesa`}>
         <label className="flex w-full items-center gap-2 rounded-xl bg-slate-100 px-4 py-3 md:w-80">
           <Search className="size-4 text-slate-400" />
-          <input aria-label="Kërko dërgesa" value={search} onChange={(event) => setSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Kod, klient, qytet..." />
+          <input aria-label="Kërko dërgesa" value={search} onChange={(event) => setSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Kod, ID, telefon, adresë..." />
         </label>
       </PanelHeader>
       <div className="space-y-3">
@@ -505,7 +506,7 @@ function ShipmentDialog({ shipment, drivers, staff, onClose, onUpdated, onProof 
   return (
     <div className="fixed inset-0 z-50 grid place-items-end bg-[#071b33]/70 p-0 backdrop-blur-sm md:place-items-center md:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <dialog open aria-labelledby="shipment-dialog-title" className="relative m-0 max-h-[94vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 text-[#10233d] md:m-auto md:max-w-2xl md:rounded-3xl md:p-7">
-        <div className="flex items-start justify-between gap-4"><div><p className="font-mono text-sm font-black text-orange-600">{shipment.tracking_code}</p><h2 id="shipment-dialog-title" className="mt-1 text-2xl font-black">Menaxho dërgesën</h2></div><button onClick={onClose} className="grid size-10 place-items-center rounded-xl bg-slate-100" aria-label="Mbyll"><X className="size-5" /></button></div>
+        <div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><p className="font-mono text-sm font-black text-orange-600">{shipment.tracking_code}</p><CopyTrackingButton value={shipment.tracking_code} compact /></div><h2 id="shipment-dialog-title" className="mt-1 text-2xl font-black">Menaxho dërgesën</h2></div><button onClick={onClose} className="grid size-10 place-items-center rounded-xl bg-slate-100" aria-label="Mbyll"><X className="size-5" /></button></div>
         <div className="my-6 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-2"><p><span className="text-slate-500">Dërguesi:</span><br /><strong>{shipment.sender_name}</strong> · {shipment.sender_phone}</p><p><span className="text-slate-500">Marrësi:</span><br /><strong>{shipment.recipient_name}</strong> · {shipment.recipient_phone}</p><p><span className="text-slate-500">Itinerari:</span><br /><strong>{shipment.pickup_city} → {shipment.delivery_city}</strong></p><p><span className="text-slate-500">Adresa:</span><br /><strong>{shipment.delivery_address}</strong></p></div>
         <form onSubmit={save} className="space-y-4">
           <FormField label="Statusi"><select value={status} onChange={(event) => setStatus(event.target.value)} className="form-control">{shipmentStatuses.map((item) => <option key={item}>{item}</option>)}</select></FormField>
