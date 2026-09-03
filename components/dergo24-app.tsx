@@ -108,6 +108,10 @@ const initialForm = {
   weight: '1',
   service: 'standard',
   codAmount: '0',
+  pickupDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+  deliveryWindow: 'anytime',
+  deliveryMethod: 'home',
+  pickupPointId: '',
 };
 const initialQuote = {
   customerName: '',
@@ -266,7 +270,7 @@ export function Dergo24App() {
       const response = await fetch('/api/shipments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, weight: Number(form.weight) }),
+        body: JSON.stringify({ ...form, weight: Number(form.weight), codAmount: Number(form.codAmount), pickupPointId: form.pickupPointId || null }),
       });
       const data = (await response.json()) as BookingResult & {
         error?: string;
@@ -872,6 +876,33 @@ function BookingModal({
   onClose: () => void;
   onTrack: () => void;
 }) {
+  const [pickupPoints, setPickupPoints] = useState<Array<{ id: string; name: string; city: string; address: string; opening_hours: string }>>([]);
+  const [addressMessage, setAddressMessage] = useState('');
+  const [addressValid, setAddressValid] = useState(false);
+
+  useEffect(() => {
+    void fetch('/api/pickup-points').then(async (response) => {
+      if (!response.ok) return;
+      const body = await response.json() as { points: typeof pickupPoints };
+      setPickupPoints(body.points);
+    });
+  }, []);
+
+  async function validateAddress() {
+    const response = await fetch('/api/address/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ city: form.deliveryCity, address: form.address }),
+    });
+    const body = await response.json() as { valid: boolean; city?: string; address?: string; message: string };
+    setAddressValid(body.valid);
+    setAddressMessage(body.message);
+    if (body.valid) {
+      if (body.city) field('deliveryCity', body.city);
+      if (body.address) field('address', body.address);
+    }
+  }
+
   return (
     <dialog
       open
@@ -967,6 +998,7 @@ function BookingModal({
                   onChange={(v) => field('address', v)}
                   placeholder="Rruga, numri, zona"
                 />
+                <div className="mt-2 flex items-center justify-between gap-3"><p className={`text-xs font-bold ${addressValid ? 'text-emerald-600' : 'text-slate-500'}`}>{addressMessage || 'Kontrolloni adresën para rezervimit.'}</p><button type="button" onClick={validateAddress} className="shrink-0 rounded-lg bg-slate-100 px-3 py-2 text-xs font-black">Verifiko adresën</button></div>
               </div>
               <FormSelect
                 label="Lloji i pakos"
@@ -993,7 +1025,14 @@ function BookingModal({
                 step="1"
                 placeholder="0"
               />
+              <FormInput label="Data e marrjes" value={form.pickupDate} onChange={(v) => field('pickupDate', v)} type="date" min={new Date().toISOString().slice(0, 10)} />
+              <FormSelect label="Orari i preferuar i dorëzimit" value={form.deliveryWindow} onChange={(v) => field('deliveryWindow', v)} options={['anytime', '09:00-13:00', '13:00-17:00', '17:00-20:00']} />
             </div>
+            <p className="mb-3 mt-6 text-sm font-bold">Mënyra e dorëzimit</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[['home', 'Në adresën e marrësit'], ['pickup_point', 'Në një pikë Dergo24']].map(([value, label]) => <button type="button" key={value} onClick={() => { field('deliveryMethod', value); if (value === 'home') field('pickupPointId', ''); }} className={`rounded-2xl border p-4 text-left font-bold ${form.deliveryMethod === value ? 'border-primary bg-primary/5 ring-2 ring-primary/10' : ''}`}>{label}</button>)}
+            </div>
+            {form.deliveryMethod === 'pickup_point' && <div className="mt-4"><FormSelect label="Pika e tërheqjes" value={form.pickupPointId} onChange={(value) => { field('pickupPointId', value); const point = pickupPoints.find((item) => item.id === value); if (point) { field('deliveryCity', point.city); field('address', point.address); setAddressValid(true); setAddressMessage('Adresa e pikës Dergo24 është e verifikuar.'); } }} options={pickupPoints.map((point) => point.id)} optionLabels={Object.fromEntries(pickupPoints.map((point) => [point.id, `${point.name} · ${point.city}`]))} /></div>}
             <p className="mb-3 mt-6 text-sm font-bold">Shërbimi</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
@@ -1253,11 +1292,13 @@ function FormSelect({
   value,
   onChange,
   options,
+  optionLabels,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
+  optionLabels?: Record<string, string>;
 }) {
   return (
     <label className="block">
@@ -1268,8 +1309,9 @@ function FormSelect({
         onChange={(event) => onChange(event.target.value)}
         className="h-11 w-full rounded-lg border bg-transparent px-3 text-sm outline-none focus:border-primary"
       >
+        {!value && <option value="">Zgjidhni...</option>}
         {options.map((option) => (
-          <option key={option}>{option}</option>
+          <option key={option} value={option}>{optionLabels?.[option] ?? option}</option>
         ))}
       </select>
     </label>

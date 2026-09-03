@@ -14,6 +14,8 @@ import {
   PackageCheck,
   RefreshCw,
   Search,
+  ShieldAlert,
+  Star,
   Truck,
   UserRound,
 } from 'lucide-react';
@@ -42,9 +44,15 @@ type CustomerShipment = {
   quoted_price_all: number;
   cod_amount_all: number;
   cod_status: 'not_required' | 'pending' | 'collected' | 'settled';
+  pickup_date: string | null;
+  delivery_window: string;
+  delivery_method: 'home' | 'pickup_point';
+  pickup_points: { name: string; address: string; opening_hours: string } | null;
   created_at: string;
   tracking_events: TrackingEvent[];
   delivery_proofs: { recipient_name: string; delivered_at: string; cod_collected_all: number } | null;
+  claims: Array<{ id: string; claim_type: string; description: string; requested_refund_all: number; approved_refund_all: number | null; status: string; staff_notes: string | null; created_at: string }>;
+  delivery_ratings: { rating: number; comment: string | null } | null;
 };
 type AccountData = { customer: Customer; shipments: CustomerShipment[] };
 
@@ -144,7 +152,7 @@ export default function AccountPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <section className="space-y-4">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><h2 className="text-2xl font-black">Dërgesat e mia</h2><label className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200 sm:w-72"><Search className="size-4 text-slate-400" /><input aria-label="Kërko dërgesat e mia" value={search} onChange={(event) => setSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Kod, qytet, marrës..." /></label></div>
-            {filteredShipments.map((shipment) => <ShipmentCard key={shipment.id} shipment={shipment} />)}
+            {filteredShipments.map((shipment) => <ShipmentCard key={shipment.id} shipment={shipment} onUpdated={loadAccount} />)}
             {!data.shipments.length && (
               <div className="grid min-h-64 place-items-center rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center"><div><Box className="mx-auto mb-4 size-10 text-slate-300" /><h3 className="font-black">Ende nuk ka dërgesa</h3><p className="mt-2 text-sm text-slate-500">Hyni në llogari përpara rezervimit dhe pakoja do të shfaqet këtu.</p></div></div>
             )}
@@ -204,11 +212,20 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
   );
 }
 
-function ShipmentCard({ shipment }: { shipment: CustomerShipment }) {
+function ShipmentCard({ shipment, onUpdated }: { shipment: CustomerShipment; onUpdated: () => Promise<void> }) {
   const events = [...shipment.tracking_events].sort((first, second) => +new Date(second.created_at) - +new Date(first.created_at));
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claim, setClaim] = useState({ claimType: 'damaged', description: '', requestedRefund: '0' });
+  const [rating, setRating] = useState(5);
+  const comment = '';
+  const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  async function submitClaim(event: SyntheticEvent<HTMLFormElement>) { event.preventDefault(); setSaving(true); setMessage(''); try { await apiRequest('/api/account/claims', { method: 'POST', body: JSON.stringify({ shipmentId: shipment.id, claimType: claim.claimType, description: claim.description, requestedRefund: Number(claim.requestedRefund) }) }); setClaimOpen(false); setMessage('Ankesa u dërgua.'); await onUpdated(); } catch (error) { setMessage(error instanceof Error ? error.message : 'Ankesa nuk u dërgua.'); } finally { setSaving(false); } }
+  async function submitRating() { setSaving(true); setMessage(''); try { await apiRequest('/api/account/ratings', { method: 'POST', body: JSON.stringify({ shipmentId: shipment.id, rating, comment }) }); setMessage('Faleminderit për vlerësimin.'); await onUpdated(); } catch (error) { setMessage(error instanceof Error ? error.message : 'Vlerësimi nuk u ruajt.'); } finally { setSaving(false); } }
   return (
     <article className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-      <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-start"><div><div className="flex items-center gap-2"><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><CopyTrackingButton value={shipment.tracking_code} compact /></div><h3 className="mt-2 text-lg font-black">{shipment.pickup_city} <ArrowRight className="mx-1 inline size-4" /> {shipment.delivery_city}</h3><p className="mt-1 text-sm text-slate-500">Për {shipment.recipient_name} · {shipment.delivery_address}</p>{shipment.delivery_proofs && <p className="mt-2 text-xs font-black text-emerald-700">Marrë nga {shipment.delivery_proofs.recipient_name} më {formatDate(shipment.delivery_proofs.delivered_at)}</p>}</div><div className="sm:text-right"><span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-200">{shipment.status}</span><p className="mt-2 font-black">{shipment.quoted_price_all} Lekë</p>{shipment.cod_amount_all > 0 && <p className="mt-1 text-xs font-black text-orange-600">COD {shipment.cod_amount_all} Lekë · {shipment.cod_status}</p>}</div></div>
+      <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-start"><div><div className="flex items-center gap-2"><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><CopyTrackingButton value={shipment.tracking_code} compact /></div><h3 className="mt-2 text-lg font-black">{shipment.pickup_city} <ArrowRight className="mx-1 inline size-4" /> {shipment.delivery_city}</h3><p className="mt-1 text-sm text-slate-500">Për {shipment.recipient_name} · {shipment.delivery_address}</p><p className="mt-2 text-xs font-bold text-slate-500">Marrja: {shipment.pickup_date ?? 'Për t’u konfirmuar'} · Dorëzimi: {shipment.delivery_window === 'anytime' ? 'gjatë ditës' : shipment.delivery_window}</p>{shipment.pickup_points && <p className="mt-1 text-xs font-black text-orange-600">Tërheqje te {shipment.pickup_points.name} · {shipment.pickup_points.opening_hours}</p>}{shipment.delivery_proofs && <p className="mt-2 text-xs font-black text-emerald-700">Marrë nga {shipment.delivery_proofs.recipient_name} më {formatDate(shipment.delivery_proofs.delivered_at)}</p>}</div><div className="sm:text-right"><span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-200">{shipment.status}</span><p className="mt-2 font-black">{shipment.quoted_price_all} Lekë</p>{shipment.cod_amount_all > 0 && <p className="mt-1 text-xs font-black text-orange-600">COD {shipment.cod_amount_all} Lekë · {shipment.cod_status}</p>}</div></div>
+      <div className="border-t border-slate-100 p-5"><div className="flex flex-wrap gap-2"><button onClick={() => setClaimOpen((open) => !open)} className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700"><ShieldAlert className="size-4" /> Raporto problem</button>{shipment.status === 'U dorëzua' && !shipment.delivery_ratings && <div className="flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-2">{[1,2,3,4,5].map((value) => <button key={value} onClick={() => setRating(value)} aria-label={`${value} yje`}><Star className={`size-5 ${value <= rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} /></button>)}<button onClick={submitRating} disabled={saving} className="ml-2 text-xs font-black text-amber-800">Dërgo</button></div>}{shipment.delivery_ratings && <span className="flex items-center gap-1 rounded-xl bg-amber-50 px-3 py-2 text-xs font-black text-amber-700"><Star className="size-4 fill-current" /> {shipment.delivery_ratings.rating}/5</span>}</div>{shipment.claims.map((item) => <div key={item.id} className="mt-3 rounded-xl bg-red-50 p-3 text-xs"><p className="font-black text-red-800">Ankesa: {item.status} · {item.requested_refund_all} Lekë</p>{item.staff_notes && <p className="mt-1 text-red-700">Përgjigjja: {item.staff_notes}</p>}</div>)}{claimOpen && <form onSubmit={submitClaim} className="mt-4 grid gap-3"><select value={claim.claimType} onChange={(event) => setClaim({ ...claim, claimType: event.target.value })} className="form-control"><option value="damaged">Pako e dëmtuar</option><option value="lost">Pako e humbur</option><option value="delayed">Vonesë</option><option value="other">Tjetër</option></select><textarea value={claim.description} onChange={(event) => setClaim({ ...claim, description: event.target.value })} className="form-control min-h-24" placeholder="Përshkruani problemin..." minLength={10} required /><input type="number" min="0" value={claim.requestedRefund} onChange={(event) => setClaim({ ...claim, requestedRefund: event.target.value })} className="form-control" placeholder="Rimbursimi i kërkuar në Lekë" /><button disabled={saving} className="rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white">Dërgo ankesën</button></form>}{message && <p className="mt-3 text-xs font-bold text-slate-600">{message}</p>}</div>
       <div className="border-t border-slate-100 bg-slate-50 p-5">
         <p className="mb-4 text-xs font-black uppercase tracking-[0.16em] text-slate-400">Historiku</p>
         <div className="space-y-4">

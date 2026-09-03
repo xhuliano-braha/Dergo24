@@ -16,7 +16,7 @@ export async function GET(
 
   let query = supabase
     .from('shipments')
-    .select('id, tracking_code, sender_name, sender_phone, recipient_name, recipient_phone, pickup_city, delivery_city, delivery_address, package_type, weight_kg, service, cod_amount_all, quoted_price_all, created_at')
+    .select('id, tracking_code, sender_name, sender_phone, recipient_name, recipient_phone, pickup_city, delivery_city, delivery_address, package_type, weight_kg, service, cod_amount_all, quoted_price_all, pickup_date, delivery_window, delivery_method, pickup_points(name, address), created_at')
     .eq('id', id);
 
   if (staff.role === 'courier') {

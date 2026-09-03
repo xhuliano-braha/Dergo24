@@ -8,6 +8,7 @@ import {
   Banknote,
   BarChart3,
   Box,
+  CalendarDays,
   CheckCircle2,
   Clock3,
   LogOut,
@@ -20,8 +21,11 @@ import {
   RefreshCw,
   Search,
   Settings,
+  ShieldAlert,
   ShieldCheck,
+  Star,
   Truck,
+  Upload,
   UserPlus,
   Users,
   X,
@@ -67,8 +71,15 @@ type Shipment = {
   cod_amount_all: number;
   cod_status: 'not_required' | 'pending' | 'collected' | 'settled';
   driver_id: string | null;
+  pickup_date: string | null;
+  delivery_window: string;
+  delivery_method: 'home' | 'pickup_point';
+  pickup_point_id: string | null;
+  address_validated: boolean;
+  route_order: number | null;
   created_at: string;
   drivers: { full_name: string } | null;
+  pickup_points: { name: string; address: string } | null;
   delivery_proofs: { recipient_name: string; delivered_at: string; cod_collected_all: number } | null;
 };
 
@@ -86,12 +97,40 @@ type Quote = {
   created_at: string;
 };
 
+type Claim = {
+  id: string;
+  shipment_id: string;
+  claim_type: 'damaged' | 'lost' | 'delayed' | 'other';
+  description: string;
+  requested_refund_all: number;
+  approved_refund_all: number | null;
+  status: 'new' | 'reviewing' | 'approved' | 'rejected' | 'refunded';
+  staff_notes: string | null;
+  created_at: string;
+  shipments: { tracking_code: string; recipient_name: string } | null;
+};
+
+type Rating = {
+  id: string;
+  driver_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  drivers: { full_name: string } | null;
+  shipments: { tracking_code: string } | null;
+};
+
+type PickupPoint = { id: string; name: string; city: string; address: string; opening_hours: string; active: boolean };
+
 type DashboardData = {
   staff: Staff;
   shipments: Shipment[];
   quotes: Quote[];
   drivers: Driver[];
   staffAccounts: StaffAccount[];
+  claims: Claim[];
+  ratings: Rating[];
+  pickupPoints: PickupPoint[];
 };
 
 const shipmentStatuses = [
@@ -154,7 +193,7 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<
-    'shipments' | 'quotes' | 'drivers' | 'reports' | 'settings'
+    'shipments' | 'quotes' | 'drivers' | 'operations' | 'claims' | 'reports' | 'settings'
   >('shipments');
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -198,6 +237,8 @@ export default function StaffPage() {
     { id: 'shipments' as const, label: 'Dërgesat', icon: Box, count: data.shipments.length },
     { id: 'quotes' as const, label: 'Ofertat', icon: Clock3, count: data.quotes.filter((quote) => quote.status === 'new').length },
     { id: 'drivers' as const, label: 'Korrierët', icon: Users, count: data.drivers.filter((driver) => driver.active).length },
+    { id: 'operations' as const, label: 'Planifikimi', icon: CalendarDays, count: data.shipments.filter((shipment) => shipment.pickup_date === new Date().toISOString().slice(0, 10)).length },
+    { id: 'claims' as const, label: 'Ankesat', icon: ShieldAlert, count: data.claims.filter((claim) => ['new', 'reviewing'].includes(claim.status)).length },
     { id: 'reports' as const, label: 'Raportet', icon: BarChart3, count: data.shipments.filter((shipment) => shipment.cod_status === 'collected').length },
     { id: 'settings' as const, label: 'Stafi & siguria', icon: Settings, count: data.staffAccounts.filter((account) => account.active).length },
   ].filter((item) => data.staff.role !== 'courier' || item.id === 'shipments');
@@ -295,7 +336,9 @@ export default function StaffPage() {
           {tab === 'drivers' && (
             <DriversPanel drivers={data.drivers} staff={data.staff} accounts={data.staffAccounts} onUpdated={loadDashboard} />
           )}
-          {tab === 'reports' && <ReportsPanel shipments={data.shipments} onUpdated={loadDashboard} />}
+          {tab === 'operations' && <OperationsPanel data={data} onUpdated={loadDashboard} />}
+          {tab === 'claims' && <ClaimsPanel claims={data.claims} onUpdated={loadDashboard} />}
+          {tab === 'reports' && <ReportsPanel shipments={data.shipments} ratings={data.ratings} onUpdated={loadDashboard} />}
           {tab === 'settings' && (
             <StaffSettingsPanel
               currentStaff={data.staff}
@@ -448,7 +491,7 @@ function ShipmentsPanel({ shipments, search, setSearch, onSelect }: { shipments:
       <div className="space-y-3">
         {filtered.map((shipment) => (
           <button aria-label={`Menaxho dërgesën ${shipment.tracking_code}`} key={shipment.id} onClick={() => onSelect(shipment)} className="grid w-full gap-3 rounded-2xl border border-slate-200 p-4 text-left transition hover:border-orange-300 hover:shadow-md md:grid-cols-[1.2fr_1.2fr_1fr_auto] md:items-center">
-            <div><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><p className="mt-1 font-bold">{shipment.sender_name}</p><p className="text-xs text-slate-500">{formatDate(shipment.created_at)}</p></div>
+            <div><div className="flex items-center gap-2">{shipment.route_order && <span className="grid size-7 place-items-center rounded-full bg-[#071b33] text-xs font-black text-white">{shipment.route_order}</span>}<p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p></div><p className="mt-1 font-bold">{shipment.sender_name}</p><p className="text-xs text-slate-500">{shipment.pickup_date ?? formatDate(shipment.created_at)} · {shipment.delivery_window}</p></div>
             <div><p className="text-sm font-bold">{shipment.pickup_city} <ArrowRight className="mx-1 inline size-3" /> {shipment.delivery_city}</p><p className="mt-1 text-xs text-slate-500">Për: {shipment.recipient_name}</p></div>
             <div><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${statusTone(shipment.status)}`}>{shipment.status}</span><p className="mt-2 text-xs text-slate-500">{shipment.drivers?.full_name ?? 'Pa korrier'}</p></div>
             <div className="flex items-center justify-between gap-5 md:block md:text-right"><p className="font-black">{shipment.quoted_price_all} Lekë</p><p className="text-xs uppercase text-slate-500">{shipment.service}</p>{shipment.cod_amount_all > 0 && <p className="mt-1 text-xs font-black text-orange-600">COD {shipment.cod_amount_all} · {shipment.cod_status}</p>}</div>
@@ -507,7 +550,7 @@ function ShipmentDialog({ shipment, drivers, staff, onClose, onUpdated, onProof 
     <div className="fixed inset-0 z-50 grid place-items-end bg-[#071b33]/70 p-0 backdrop-blur-sm md:place-items-center md:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <dialog open aria-labelledby="shipment-dialog-title" className="relative m-0 max-h-[94vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 text-[#10233d] md:m-auto md:max-w-2xl md:rounded-3xl md:p-7">
         <div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><p className="font-mono text-sm font-black text-orange-600">{shipment.tracking_code}</p><CopyTrackingButton value={shipment.tracking_code} compact /></div><h2 id="shipment-dialog-title" className="mt-1 text-2xl font-black">Menaxho dërgesën</h2></div><button onClick={onClose} className="grid size-10 place-items-center rounded-xl bg-slate-100" aria-label="Mbyll"><X className="size-5" /></button></div>
-        <div className="my-6 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-2"><p><span className="text-slate-500">Dërguesi:</span><br /><strong>{shipment.sender_name}</strong> · {shipment.sender_phone}</p><p><span className="text-slate-500">Marrësi:</span><br /><strong>{shipment.recipient_name}</strong> · {shipment.recipient_phone}</p><p><span className="text-slate-500">Itinerari:</span><br /><strong>{shipment.pickup_city} → {shipment.delivery_city}</strong></p><p><span className="text-slate-500">Adresa:</span><br /><strong>{shipment.delivery_address}</strong></p></div>
+        <div className="my-6 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-2"><p><span className="text-slate-500">Dërguesi:</span><br /><strong>{shipment.sender_name}</strong> · {shipment.sender_phone}</p><p><span className="text-slate-500">Marrësi:</span><br /><strong>{shipment.recipient_name}</strong> · {shipment.recipient_phone}</p><p><span className="text-slate-500">Itinerari:</span><br /><strong>{shipment.pickup_city} → {shipment.delivery_city}</strong></p><p><span className="text-slate-500">Adresa:</span><br /><strong>{shipment.pickup_points?.name ?? shipment.delivery_address}</strong></p><p><span className="text-slate-500">Marrja:</span><br /><strong>{shipment.pickup_date ?? 'Për t’u konfirmuar'}</strong></p><p><span className="text-slate-500">Orari:</span><br /><strong>{shipment.delivery_window === 'anytime' ? 'Gjatë ditës' : shipment.delivery_window}</strong></p></div>
         <form onSubmit={save} className="space-y-4">
           <FormField label="Statusi"><select value={status} onChange={(event) => setStatus(event.target.value)} className="form-control">{shipmentStatuses.map((item) => <option key={item}>{item}</option>)}</select></FormField>
           <FormField label="Korrieri"><select disabled={staff.role === 'courier'} value={driverId} onChange={(event) => setDriverId(event.target.value)} className="form-control disabled:opacity-60"><option value="">Pa korrier</option>{drivers.filter((driver) => driver.active).map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name} · {driver.phone}</option>)}</select></FormField>
@@ -605,7 +648,99 @@ function DriverRow({ driver, courierAccounts, canManage, onUpdated }: { driver: 
   );
 }
 
-function ReportsPanel({ shipments, onUpdated }: { shipments: Shipment[]; onUpdated: () => Promise<void> }) {
+function parseCsvLine(line: string) {
+  const values: string[] = [];
+  let value = '';
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === '"' && line[index + 1] === '"' && quoted) { value += '"'; index += 1; }
+    else if (character === '"') quoted = !quoted;
+    else if (character === ',' && !quoted) { values.push(value.trim()); value = ''; }
+    else value += character;
+  }
+  values.push(value.trim());
+  return values;
+}
+
+function OperationsPanel({ data, onUpdated }: { data: DashboardData; onUpdated: () => Promise<void> }) {
+  const [driverId, setDriverId] = useState(data.drivers[0]?.id ?? '');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [stops, setStops] = useState<Array<{ id: string; tracking_code: string; delivery_city: string; delivery_address: string; delivery_window: string; routeOrder: number }>>([]);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [point, setPoint] = useState({ name: '', city: '', address: '', openingHours: '' });
+
+  async function optimize() {
+    setLoading(true); setMessage('');
+    try {
+      const result = await apiRequest<{ stops: typeof stops }>('/api/staff/routes/optimize', { method: 'POST', body: JSON.stringify({ driverId, pickupDate: date }) });
+      setStops(result.stops); setMessage(`${result.stops.length} ndalesa u organizuan.`); await onUpdated();
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Planifikimi dështoi.'); }
+    finally { setLoading(false); }
+  }
+
+  async function importCsv(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setLoading(true); setMessage('');
+    try {
+      const lines = (await file.text()).split(/\r?\n/).filter(Boolean);
+      const headers = parseCsvLine(lines[0]);
+      const rows = lines.slice(1).map((line) => Object.fromEntries(headers.map((header, index) => [header, parseCsvLine(line)[index] ?? ''])));
+      const payload = rows.map((row) => ({
+        ...row,
+        weight: Number(row.weight),
+        codAmount: Number(row.codAmount || 0),
+        pickupPointId: row.pickupPointId || null,
+        deliveryWindow: row.deliveryWindow || 'anytime',
+        deliveryMethod: row.deliveryMethod || 'home',
+      }));
+      const result = await apiRequest<{ imported: number }>('/api/staff/shipments/import', { method: 'POST', body: JSON.stringify(payload) });
+      setMessage(`${result.imported} dërgesa u importuan me sukses.`); await onUpdated();
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Importi dështoi.'); }
+    finally { setLoading(false); event.target.value = ''; }
+  }
+
+  function downloadTemplate() {
+    const headers = 'senderName,senderPhone,recipientName,recipientPhone,pickupCity,deliveryCity,address,packageType,weight,service,codAmount,pickupDate,deliveryWindow,deliveryMethod,pickupPointId';
+    const example = `Biznes Test,0690000000,Klient Test,0691111111,Tiranë,Durrës,"Rruga Kryesore, Nr. 10",Pako,1,standard,0,${date},anytime,home,`;
+    const url = URL.createObjectURL(new Blob([`${headers}\n${example}\n`], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'dergo24-import-template.csv'; link.click(); URL.revokeObjectURL(url);
+  }
+
+  async function createPoint(event: SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault(); setLoading(true); setMessage('');
+    try { await apiRequest('/api/pickup-points', { method: 'POST', body: JSON.stringify(point) }); setPoint({ name: '', city: '', address: '', openingHours: '' }); setMessage('Pika u shtua.'); await onUpdated(); }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Pika nuk u ruajt.'); }
+    finally { setLoading(false); }
+  }
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-2">
+      <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><PanelHeader eyebrow="Rruga ditore" title="Organizo ndalesat" /><div className="grid gap-3 sm:grid-cols-2"><FormField label="Korrieri"><select value={driverId} onChange={(event) => setDriverId(event.target.value)} className="form-control"><option value="">Zgjidhni...</option>{data.drivers.filter((driver) => driver.active).map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name}</option>)}</select></FormField><FormField label="Data"><input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="form-control" /></FormField></div><button onClick={optimize} disabled={!driverId || loading} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 font-black text-white disabled:opacity-50"><CalendarDays className="size-5" /> Organizo rrugën</button>{stops.length > 0 && <div className="mt-5 space-y-2">{stops.map((stop) => <div key={stop.id} className="flex gap-3 rounded-xl bg-slate-50 p-3"><span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#071b33] text-xs font-black text-white">{stop.routeOrder}</span><div><p className="font-mono text-xs font-black text-orange-600">{stop.tracking_code}</p><p className="text-sm font-bold">{stop.delivery_city} · {stop.delivery_address}</p><p className="text-xs text-slate-500">{stop.delivery_window}</p></div></div>)}</div>}</article>
+      <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><PanelHeader eyebrow="Biznes" title="Importo dërgesa nga CSV" /><p className="text-sm leading-6 text-slate-500">Përdorni modelin e Dergo24 për të krijuar deri në 200 dërgesa njëherësh.</p><div className="mt-5 grid gap-3 sm:grid-cols-2"><button onClick={downloadTemplate} className="rounded-xl bg-slate-100 px-4 py-3 text-sm font-black">Shkarko modelin CSV</button><label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#071b33] px-4 py-3 text-sm font-black text-white"><Upload className="size-4" /> Zgjidh CSV<input type="file" accept=".csv,text/csv" onChange={importCsv} className="hidden" /></label></div></article>
+      <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><PanelHeader eyebrow="Pika tërheqjeje" title={`${data.pickupPoints.length} pika aktive`} /><div className="space-y-3">{data.pickupPoints.map((item) => <div key={item.id} className="rounded-xl border border-slate-200 p-4"><p className="font-black">{item.name}</p><p className="mt-1 text-sm text-slate-500">{item.address}, {item.city}</p><p className="mt-1 text-xs font-bold text-orange-600">{item.opening_hours}</p></div>)}</div></article>
+      {data.staff.role === 'admin' && <form onSubmit={createPoint} className="rounded-2xl bg-[#071b33] p-5 text-white"><PanelHeader eyebrow="Rrjeti Dergo24" title="Shto pikë të re" /><div className="grid gap-3 sm:grid-cols-2"><input value={point.name} onChange={(event) => setPoint({ ...point, name: event.target.value })} className="staff-dark-control" placeholder="Emri i pikës" required /><input value={point.city} onChange={(event) => setPoint({ ...point, city: event.target.value })} className="staff-dark-control" placeholder="Qyteti" required /><input value={point.address} onChange={(event) => setPoint({ ...point, address: event.target.value })} className="staff-dark-control sm:col-span-2" placeholder="Adresa" required /><input value={point.openingHours} onChange={(event) => setPoint({ ...point, openingHours: event.target.value })} className="staff-dark-control sm:col-span-2" placeholder="Orari" required /></div><button disabled={loading} className="mt-4 w-full rounded-xl bg-orange-500 px-4 py-3 font-black">Shto pikën</button></form>}
+      {message && <p className="rounded-xl bg-blue-50 p-4 text-sm font-bold text-blue-700 xl:col-span-2">{message}</p>}
+    </div>
+  );
+}
+
+function ClaimsPanel({ claims, onUpdated }: { claims: Claim[]; onUpdated: () => Promise<void> }) {
+  return <article className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><PanelHeader eyebrow="Mbrojtja e klientit" title={`${claims.length} ankesa dhe rimbursime`} /><div className="grid gap-4 xl:grid-cols-2">{claims.map((claim) => <ClaimCard key={claim.id} claim={claim} onUpdated={onUpdated} />)}{!claims.length && <EmptyState text="Nuk ka ankesa të regjistruara." />}</div></article>;
+}
+
+function ClaimCard({ claim, onUpdated }: { claim: Claim; onUpdated: () => Promise<void> }) {
+  const [status, setStatus] = useState(claim.status);
+  const [refund, setRefund] = useState(claim.approved_refund_all?.toString() ?? '');
+  const [notes, setNotes] = useState(claim.staff_notes ?? '');
+  const [saving, setSaving] = useState(false);
+  async function save() { setSaving(true); try { await apiRequest(`/api/staff/claims/${claim.id}`, { method: 'PATCH', body: JSON.stringify({ status, approvedRefund: refund ? Number(refund) : null, staffNotes: notes }) }); await onUpdated(); } finally { setSaving(false); } }
+  return <section className="rounded-2xl border border-slate-200 p-5"><div className="flex items-start justify-between gap-4"><div><p className="font-mono text-xs font-black text-orange-600">{claim.shipments?.tracking_code}</p><p className="mt-1 font-black">{claim.shipments?.recipient_name}</p></div><span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-black text-orange-700">{claim.status}</span></div><p className="mt-4 text-xs font-black uppercase tracking-widest text-slate-400">{claim.claim_type} · kërkuar {claim.requested_refund_all} Lekë</p><p className="mt-2 text-sm leading-6 text-slate-600">{claim.description}</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><select value={status} onChange={(event) => setStatus(event.target.value as Claim['status'])} className="form-control"><option value="new">E re</option><option value="reviewing">Në shqyrtim</option><option value="approved">Miratuar</option><option value="rejected">Refuzuar</option><option value="refunded">Rimbursuar</option></select><input type="number" min="0" value={refund} onChange={(event) => setRefund(event.target.value)} className="form-control" placeholder="Rimbursimi i miratuar" /></div><textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="form-control mt-3 min-h-20" placeholder="Shënim për klientin" /><button onClick={save} disabled={saving} className="mt-3 w-full rounded-xl bg-[#071b33] px-4 py-3 text-sm font-black text-white disabled:opacity-50">Ruaj vendimin</button></section>;
+}
+
+function ReportsPanel({ shipments, ratings, onUpdated }: { shipments: Shipment[]; ratings: Rating[]; onUpdated: () => Promise<void> }) {
   const [savingId, setSavingId] = useState('');
   const delivered = shipments.filter((shipment) => shipment.status === 'U dorëzua');
   const collected = shipments.filter((shipment) => shipment.cod_status === 'collected');
@@ -615,6 +750,10 @@ function ReportsPanel({ shipments, onUpdated }: { shipments: Shipment[]; onUpdat
     { label: 'COD në dorën e korrierëve', value: `${collected.reduce((total, shipment) => total + shipment.cod_amount_all, 0)} Lekë`, tone: 'bg-emerald-600' },
     { label: 'COD i mbyllur', value: `${shipments.filter((shipment) => shipment.cod_status === 'settled').reduce((total, shipment) => total + shipment.cod_amount_all, 0)} Lekë`, tone: 'bg-violet-600' },
   ];
+  const driverScores = Array.from(new Set(ratings.map((rating) => rating.driver_id))).map((driverId) => {
+    const entries = ratings.filter((rating) => rating.driver_id === driverId);
+    return { driverId, name: entries[0]?.drivers?.full_name ?? 'Korrier', average: entries.reduce((total, entry) => total + entry.rating, 0) / entries.length, count: entries.length };
+  }).sort((first, second) => second.average - first.average);
   async function settle(shipmentId: string) {
     setSavingId(shipmentId);
     try {
@@ -629,6 +768,7 @@ function ReportsPanel({ shipments, onUpdated }: { shipments: Shipment[]; onUpdat
         <PanelHeader eyebrow="Arka COD" title={`${collected.length} arkëtime për t’u mbyllur`} />
         <div className="space-y-3">{collected.map((shipment) => <div key={shipment.id} className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center"><div><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><p className="mt-1 font-black">{shipment.recipient_name} · {shipment.delivery_city}</p><p className="text-xs text-slate-500">Korrieri: {shipment.drivers?.full_name ?? 'Pa korrier'}</p></div><div className="flex items-center gap-4"><p className="text-xl font-black">{shipment.cod_amount_all} Lekë</p><button onClick={() => settle(shipment.id)} disabled={savingId === shipment.id} className="rounded-xl bg-[#071b33] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{savingId === shipment.id ? 'Duke mbyllur...' : 'Mbyll në arkë'}</button></div></div>)}{!collected.length && <EmptyState text="Nuk ka arkëtime të hapura nga korrierët." />}</div>
       </article>
+      <article className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:p-6"><PanelHeader eyebrow="Cilësia e shërbimit" title="Performanca e korrierëve" /><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{driverScores.map((driver) => <div key={driver.driverId} className="rounded-2xl border border-slate-200 p-5"><div className="flex items-center justify-between"><p className="font-black">{driver.name}</p><span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-sm font-black text-amber-700"><Star className="size-4 fill-current" /> {driver.average.toFixed(1)}</span></div><p className="mt-2 text-xs font-bold text-slate-500">{driver.count} vlerësime klientësh</p></div>)}{!driverScores.length && <EmptyState text="Ende nuk ka vlerësime për korrierët." />}</div></article>
     </div>
   );
 }

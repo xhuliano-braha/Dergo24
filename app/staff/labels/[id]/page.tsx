@@ -20,6 +20,10 @@ type LabelShipment = {
   service: string;
   cod_amount_all: number;
   quoted_price_all: number;
+  pickup_date: string | null;
+  delivery_window: string;
+  delivery_method: 'home' | 'pickup_point';
+  pickup_points: { name: string; address: string } | null;
   created_at: string;
 };
 
@@ -71,6 +75,7 @@ export default function ShippingLabelPage({ params }: { params: Promise<{ id: st
           <LabelFact label="Pesha" value={`${shipment.weight_kg} kg`} />
           <LabelFact label="Pagesa" value={shipment.cod_amount_all > 0 ? `${shipment.cod_amount_all} Lekë COD` : `${shipment.quoted_price_all} Lekë`} />
         </section>
+        <section className="border-b border-slate-300 py-4 text-center"><p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Planifikimi</p><p className="mt-1 text-sm font-black">Marrja: {shipment.pickup_date ?? 'Për t’u konfirmuar'} · {shipment.delivery_window === 'anytime' ? 'Gjatë ditës' : shipment.delivery_window}</p>{shipment.pickup_points && <p className="mt-1 text-xs">Tërheqje: {shipment.pickup_points.name} · {shipment.pickup_points.address}</p>}</section>
         <section className="py-7 text-center">
           <svg ref={barcodeRef} className="mx-auto max-w-full" aria-label={`Barkodi ${shipment.tracking_code}`} />
           <p className="mt-4 font-mono text-xl font-black tracking-wider">{shipment.tracking_code}</p>

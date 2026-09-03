@@ -6,6 +6,7 @@ import {
   shipmentSchema,
 } from '@/lib/shipments';
 import { getAuthenticatedCustomer } from '@/lib/customer-auth';
+import { validateAlbanianAddress } from '@/lib/albania-address';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,6 +85,11 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const customer = await getAuthenticatedCustomer(request);
     const input = parsed.data;
+    const addressCheck = validateAlbanianAddress(input.deliveryCity, input.address);
+    if (!addressCheck.valid)
+      return NextResponse.json({ error: addressCheck.message }, { status: 400 });
+    if (input.deliveryMethod === 'pickup_point' && !input.pickupPointId)
+      return NextResponse.json({ error: 'Zgjidhni pikën e tërheqjes.' }, { status: 400 });
     const shipmentId = crypto.randomUUID();
     const trackingCode = createTrackingCode();
     const createdAt = new Date().toISOString();
@@ -98,8 +104,8 @@ export async function POST(request: NextRequest) {
       recipient_name: input.recipientName,
       recipient_phone: input.recipientPhone,
       pickup_city: input.pickupCity,
-      delivery_city: input.deliveryCity,
-      delivery_address: input.address,
+      delivery_city: addressCheck.city,
+      delivery_address: addressCheck.address,
       package_type: input.packageType,
       weight_kg: input.weight,
       service: input.service,
@@ -108,6 +114,11 @@ export async function POST(request: NextRequest) {
       quoted_price_all: price,
       cod_amount_all: input.codAmount,
       cod_status: input.codAmount > 0 ? 'pending' : 'not_required',
+      pickup_date: input.pickupDate,
+      delivery_window: input.deliveryWindow,
+      delivery_method: input.deliveryMethod,
+      pickup_point_id: input.pickupPointId,
+      address_validated: true,
       created_at: createdAt,
       updated_at: createdAt,
     });
