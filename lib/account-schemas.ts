@@ -18,11 +18,11 @@ export const staffAccountCreateSchema = z.object({
   fullName: z.string().trim().min(2).max(80),
   login: z.string().trim().min(3).max(160),
   password: z.string().min(8).max(128),
-  role: z.enum(['admin', 'dispatcher', 'support']),
+  role: z.enum(['admin', 'dispatcher', 'support', 'courier']),
 });
 
 export const staffAccountUpdateSchema = z.object({
-  role: z.enum(['admin', 'dispatcher', 'support']),
+  role: z.enum(['admin', 'dispatcher', 'support', 'courier']),
   active: z.boolean(),
   newPassword: z.string().min(8).max(128).optional(),
 });

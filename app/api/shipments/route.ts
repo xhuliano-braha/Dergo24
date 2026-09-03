@@ -106,6 +106,8 @@ export async function POST(request: NextRequest) {
       status,
       customer_id: customer?.id ?? null,
       quoted_price_all: price,
+      cod_amount_all: input.codAmount,
+      cod_status: input.codAmount > 0 ? 'pending' : 'not_required',
       created_at: createdAt,
       updated_at: createdAt,
     });

@@ -24,12 +24,33 @@ export async function PATCH(
 
   const { id } = await params;
   const supabase = getSupabaseAdmin();
+  const { data: currentShipment } = await supabase
+    .from('shipments')
+    .select('driver_id, cod_status')
+    .eq('id', id)
+    .maybeSingle();
+  if (!currentShipment)
+    return NextResponse.json({ error: 'Dërgesa nuk u gjet.' }, { status: 404 });
+
+  if (staff.role === 'courier') {
+    const { data: driver } = await supabase
+      .from('drivers')
+      .select('id')
+      .eq('staff_id', staff.id)
+      .maybeSingle();
+    if (!driver || currentShipment.driver_id !== driver.id)
+      return NextResponse.json({ error: 'Nuk keni akses në këtë dërgesë.' }, { status: 403 });
+    if (parsed.data.status === 'U dorëzua')
+      return NextResponse.json({ error: 'Përdorni konfirmimin me firmë për dorëzimin.' }, { status: 400 });
+  }
+
   const now = new Date().toISOString();
   const { data: shipment, error: shipmentError } = await supabase
     .from('shipments')
     .update({
       status: parsed.data.status,
-      driver_id: parsed.data.driverId,
+      driver_id: staff.role === 'courier' ? currentShipment.driver_id : parsed.data.driverId,
+      cod_status: staff.role === 'courier' ? currentShipment.cod_status : parsed.data.codStatus,
       updated_at: now,
     })
     .eq('id', id)

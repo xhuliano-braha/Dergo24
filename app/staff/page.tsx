@@ -1,10 +1,12 @@
 'use client';
 
-import { SyntheticEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { PointerEvent as ReactPointerEvent, SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
   ArrowRight,
+  Banknote,
+  BarChart3,
   Box,
   CheckCircle2,
   Clock3,
@@ -12,7 +14,9 @@ import {
   LocateFixed,
   Menu,
   MessageCircle,
+  PenLine,
   PackageCheck,
+  Printer,
   RefreshCw,
   Search,
   Settings,
@@ -31,7 +35,7 @@ type Staff = {
   id: string;
   fullName: string;
   email: string;
-  role: 'admin' | 'dispatcher' | 'support';
+  role: 'admin' | 'dispatcher' | 'support' | 'courier';
 };
 
 type Driver = {
@@ -40,6 +44,7 @@ type Driver = {
   phone: string;
   status: 'available' | 'assigned' | 'off_duty';
   active: boolean;
+  staff_id: string | null;
   created_at: string;
 };
 
@@ -58,9 +63,12 @@ type Shipment = {
   service: 'standard' | 'express';
   status: string;
   quoted_price_all: number;
+  cod_amount_all: number;
+  cod_status: 'not_required' | 'pending' | 'collected' | 'settled';
   driver_id: string | null;
   created_at: string;
   drivers: { full_name: string } | null;
+  delivery_proofs: { recipient_name: string; delivered_at: string; cod_collected_all: number } | null;
 };
 
 type Quote = {
@@ -145,11 +153,12 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<
-    'shipments' | 'quotes' | 'drivers' | 'settings'
+    'shipments' | 'quotes' | 'drivers' | 'reports' | 'settings'
   >('shipments');
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
+  const [proofShipment, setProofShipment] = useState<Shipment | null>(null);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -188,8 +197,9 @@ export default function StaffPage() {
     { id: 'shipments' as const, label: 'Dërgesat', icon: Box, count: data.shipments.length },
     { id: 'quotes' as const, label: 'Ofertat', icon: Clock3, count: data.quotes.filter((quote) => quote.status === 'new').length },
     { id: 'drivers' as const, label: 'Korrierët', icon: Users, count: data.drivers.filter((driver) => driver.active).length },
+    { id: 'reports' as const, label: 'Raportet', icon: BarChart3, count: data.shipments.filter((shipment) => shipment.cod_status === 'collected').length },
     { id: 'settings' as const, label: 'Stafi & siguria', icon: Settings, count: data.staffAccounts.filter((account) => account.active).length },
-  ];
+  ].filter((item) => data.staff.role !== 'courier' || item.id === 'shipments');
 
   async function logout() {
     await apiRequest('/api/staff/auth', { method: 'DELETE' });
@@ -282,8 +292,9 @@ export default function StaffPage() {
           )}
           {tab === 'quotes' && <QuotesPanel quotes={data.quotes} onUpdated={loadDashboard} />}
           {tab === 'drivers' && (
-            <DriversPanel drivers={data.drivers} staff={data.staff} onUpdated={loadDashboard} />
+            <DriversPanel drivers={data.drivers} staff={data.staff} accounts={data.staffAccounts} onUpdated={loadDashboard} />
           )}
+          {tab === 'reports' && <ReportsPanel shipments={data.shipments} onUpdated={loadDashboard} />}
           {tab === 'settings' && (
             <StaffSettingsPanel
               currentStaff={data.staff}
@@ -299,8 +310,17 @@ export default function StaffPage() {
         <ShipmentDialog
           shipment={selectedShipment}
           drivers={data.drivers}
+          staff={data.staff}
           onClose={() => setSelectedShipment(null)}
           onUpdated={async () => { setSelectedShipment(null); await loadDashboard(); }}
+          onProof={() => { setProofShipment(selectedShipment); setSelectedShipment(null); }}
+        />
+      )}
+      {proofShipment && (
+        <ProofDialog
+          shipment={proofShipment}
+          onClose={() => setProofShipment(null)}
+          onUpdated={async () => { setProofShipment(null); await loadDashboard(); }}
         />
       )}
     </main>
@@ -430,7 +450,7 @@ function ShipmentsPanel({ shipments, search, setSearch, onSelect }: { shipments:
             <div><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><p className="mt-1 font-bold">{shipment.sender_name}</p><p className="text-xs text-slate-500">{formatDate(shipment.created_at)}</p></div>
             <div><p className="text-sm font-bold">{shipment.pickup_city} <ArrowRight className="mx-1 inline size-3" /> {shipment.delivery_city}</p><p className="mt-1 text-xs text-slate-500">Për: {shipment.recipient_name}</p></div>
             <div><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${statusTone(shipment.status)}`}>{shipment.status}</span><p className="mt-2 text-xs text-slate-500">{shipment.drivers?.full_name ?? 'Pa korrier'}</p></div>
-            <div className="flex items-center justify-between gap-5 md:block md:text-right"><p className="font-black">{shipment.quoted_price_all} Lekë</p><p className="text-xs uppercase text-slate-500">{shipment.service}</p></div>
+            <div className="flex items-center justify-between gap-5 md:block md:text-right"><p className="font-black">{shipment.quoted_price_all} Lekë</p><p className="text-xs uppercase text-slate-500">{shipment.service}</p>{shipment.cod_amount_all > 0 && <p className="mt-1 text-xs font-black text-orange-600">COD {shipment.cod_amount_all} · {shipment.cod_status}</p>}</div>
           </button>
         ))}
         {!filtered.length && <EmptyState text="Nuk u gjet asnjë dërgesë." />}
@@ -439,11 +459,12 @@ function ShipmentsPanel({ shipments, search, setSearch, onSelect }: { shipments:
   );
 }
 
-function ShipmentDialog({ shipment, drivers, onClose, onUpdated }: { shipment: Shipment; drivers: Driver[]; onClose: () => void; onUpdated: () => Promise<void> }) {
+function ShipmentDialog({ shipment, drivers, staff, onClose, onUpdated, onProof }: { shipment: Shipment; drivers: Driver[]; staff: Staff; onClose: () => void; onUpdated: () => Promise<void>; onProof: () => void }) {
   const [status, setStatus] = useState(shipment.status);
   const [driverId, setDriverId] = useState(shipment.driver_id ?? '');
   const [location, setLocation] = useState(shipment.delivery_city);
   const [details, setDetails] = useState('Statusi i dërgesës u përditësua nga stafi i Dergo24.');
+  const [codStatus, setCodStatus] = useState(shipment.cod_status);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
@@ -453,7 +474,7 @@ function ShipmentDialog({ shipment, drivers, onClose, onUpdated }: { shipment: S
   async function save(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError('');
     try {
-      await apiRequest(`/api/staff/shipments/${shipment.id}`, { method: 'PATCH', body: JSON.stringify({ status, driverId: driverId || null, location, details, latitude, longitude }) });
+      await apiRequest(`/api/staff/shipments/${shipment.id}`, { method: 'PATCH', body: JSON.stringify({ status, driverId: driverId || null, location, details, latitude, longitude, codStatus }) });
       await onUpdated();
     } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Veprimi dështoi.'); }
     finally { setSaving(false); }
@@ -488,7 +509,8 @@ function ShipmentDialog({ shipment, drivers, onClose, onUpdated }: { shipment: S
         <div className="my-6 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-2"><p><span className="text-slate-500">Dërguesi:</span><br /><strong>{shipment.sender_name}</strong> · {shipment.sender_phone}</p><p><span className="text-slate-500">Marrësi:</span><br /><strong>{shipment.recipient_name}</strong> · {shipment.recipient_phone}</p><p><span className="text-slate-500">Itinerari:</span><br /><strong>{shipment.pickup_city} → {shipment.delivery_city}</strong></p><p><span className="text-slate-500">Adresa:</span><br /><strong>{shipment.delivery_address}</strong></p></div>
         <form onSubmit={save} className="space-y-4">
           <FormField label="Statusi"><select value={status} onChange={(event) => setStatus(event.target.value)} className="form-control">{shipmentStatuses.map((item) => <option key={item}>{item}</option>)}</select></FormField>
-          <FormField label="Korrieri"><select value={driverId} onChange={(event) => setDriverId(event.target.value)} className="form-control"><option value="">Pa korrier</option>{drivers.filter((driver) => driver.active).map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name} · {driver.phone}</option>)}</select></FormField>
+          <FormField label="Korrieri"><select disabled={staff.role === 'courier'} value={driverId} onChange={(event) => setDriverId(event.target.value)} className="form-control disabled:opacity-60"><option value="">Pa korrier</option>{drivers.filter((driver) => driver.active).map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name} · {driver.phone}</option>)}</select></FormField>
+          {shipment.cod_amount_all > 0 && <FormField label={`Pagesa në dorëzim · ${shipment.cod_amount_all} Lekë`}><select disabled={staff.role === 'courier'} value={codStatus} onChange={(event) => setCodStatus(event.target.value as Shipment['cod_status'])} className="form-control disabled:opacity-60"><option value="pending">Në pritje</option><option value="collected">U mblodh</option><option value="settled">U mbyll në arkë</option></select></FormField>}
           <FormField label="Vendndodhja"><input value={location} onChange={(event) => setLocation(event.target.value)} className="form-control" required /></FormField>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -499,6 +521,10 @@ function ShipmentDialog({ shipment, drivers, onClose, onUpdated }: { shipment: S
           <FormField label="Shënimi që sheh klienti"><textarea value={details} onChange={(event) => setDetails(event.target.value)} className="form-control min-h-24 resize-y" required /></FormField>
           {error && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
           <button disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 font-black text-white hover:bg-orange-600 disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <><CheckCircle2 className="size-5" /> Ruaj dhe njofto gjurmimin</>}</button>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Link href={`/staff/labels/${shipment.id}`} target="_blank" className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-5 py-3.5 font-black text-[#071b33]"><Printer className="size-5" /> Printo etiketën</Link>
+            <button type="button" onClick={onProof} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 font-black text-white"><PenLine className="size-5" /> {shipment.delivery_proofs ? 'Shiko provën' : 'Konfirmo dorëzimin'}</button>
+          </div>
           <a href={`https://wa.me/${whatsappPhone}?text=${whatsappText}`} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#20b85a] px-5 py-3.5 font-black text-white"><MessageCircle className="size-5" /> Njofto marrësin në WhatsApp</a>
         </form>
       </dialog>
@@ -547,7 +573,7 @@ function QuoteCard({ quote, onUpdated }: { quote: Quote; onUpdated: () => Promis
   );
 }
 
-function DriversPanel({ drivers, staff, onUpdated }: { drivers: Driver[]; staff: Staff; onUpdated: () => Promise<void> }) {
+function DriversPanel({ drivers, staff, accounts, onUpdated }: { drivers: Driver[]; staff: Staff; accounts: StaffAccount[]; onUpdated: () => Promise<void> }) {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
@@ -561,19 +587,166 @@ function DriversPanel({ drivers, staff, onUpdated }: { drivers: Driver[]; staff:
   }
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
-      <article className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:p-6"><PanelHeader eyebrow="Ekipi në terren" title={`${drivers.length} korrierë`} /><div className="space-y-3">{drivers.map((driver) => <DriverRow key={driver.id} driver={driver} canManage={canManage} onUpdated={onUpdated} />)}{!drivers.length && <EmptyState text="Nuk ka korrierë të regjistruar." />}</div></article>
+      <article className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:p-6"><PanelHeader eyebrow="Ekipi në terren" title={`${drivers.length} korrierë`} /><div className="space-y-3">{drivers.map((driver) => <DriverRow key={driver.id} driver={driver} courierAccounts={accounts.filter((account) => account.role === 'courier' && account.active)} canManage={canManage} onUpdated={onUpdated} />)}{!drivers.length && <EmptyState text="Nuk ka korrierë të regjistruar." />}</div></article>
       {canManage && <form onSubmit={create} className="h-fit rounded-2xl bg-[#071b33] p-6 text-white"><div className="mb-5 grid size-11 place-items-center rounded-xl bg-orange-500"><UserPlus className="size-5" /></div><h2 className="text-xl font-black">Shto korrier</h2><p className="mt-1 text-sm text-slate-400">Regjistro një anëtar të ri të ekipit.</p><label htmlFor="driver-name" className="mt-6 block text-sm font-bold">Emri i plotë</label><input id="driver-name" value={fullName} onChange={(event) => setFullName(event.target.value)} className="mt-2 w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3 outline-none focus:border-orange-400" required /><label htmlFor="driver-phone" className="mt-4 block text-sm font-bold">Telefoni</label><input id="driver-phone" value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-xl border border-white/15 bg-white/10 px-4 py-3 outline-none focus:border-orange-400" placeholder="+355 69..." required />{error && <p className="mt-3 text-sm font-semibold text-red-300">{error}</p>}<button disabled={saving} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 font-black disabled:opacity-60">{saving ? <RefreshCw className="size-4 animate-spin" /> : 'Shto në ekip'}</button></form>}
     </div>
   );
 }
 
-function DriverRow({ driver, canManage, onUpdated }: { driver: Driver; canManage: boolean; onUpdated: () => Promise<void> }) {
+function DriverRow({ driver, courierAccounts, canManage, onUpdated }: { driver: Driver; courierAccounts: StaffAccount[]; canManage: boolean; onUpdated: () => Promise<void> }) {
   const [status, setStatus] = useState(driver.status);
   const [active, setActive] = useState(driver.active);
+  const [staffId, setStaffId] = useState(driver.staff_id ?? '');
   const [saving, setSaving] = useState(false);
-  async function save() { setSaving(true); try { await apiRequest(`/api/staff/drivers/${driver.id}`, { method: 'PATCH', body: JSON.stringify({ status, active }) }); await onUpdated(); } finally { setSaving(false); } }
+  async function save() { setSaving(true); try { await apiRequest(`/api/staff/drivers/${driver.id}`, { method: 'PATCH', body: JSON.stringify({ status, active, staffId: staffId || null }) }); await onUpdated(); } finally { setSaving(false); } }
   return (
-    <div className="grid gap-3 rounded-2xl border border-slate-200 p-4 md:grid-cols-[1fr_180px_auto] md:items-center"><div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-full bg-orange-100 font-black text-orange-600">{driver.full_name.charAt(0)}</div><div><p className="font-black">{driver.full_name}</p><a href={`tel:${driver.phone}`} className="text-sm text-slate-500">{driver.phone}</a></div></div><select disabled={!canManage} value={status} onChange={(event) => setStatus(event.target.value as Driver['status'])} className="form-control disabled:opacity-60">{driverStatuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>{canManage && <div className="flex gap-2"><button onClick={() => setActive((value) => !value)} className={`rounded-xl px-3 py-2 text-xs font-black ${active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{active ? 'Aktiv' : 'Joaktiv'}</button><button onClick={save} disabled={saving || (status === driver.status && active === driver.active)} className="rounded-xl bg-[#071b33] px-3 py-2 text-xs font-black text-white disabled:opacity-30">Ruaj</button></div>}</div>
+    <div className="grid gap-3 rounded-2xl border border-slate-200 p-4 xl:grid-cols-[1fr_160px_210px_auto] xl:items-center"><div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-full bg-orange-100 font-black text-orange-600">{driver.full_name.charAt(0)}</div><div><p className="font-black">{driver.full_name}</p><a href={`tel:${driver.phone}`} className="text-sm text-slate-500">{driver.phone}</a></div></div><select disabled={!canManage} value={status} onChange={(event) => setStatus(event.target.value as Driver['status'])} className="form-control disabled:opacity-60">{driverStatuses.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><select aria-label={`Llogaria e ${driver.full_name}`} disabled={!canManage} value={staffId} onChange={(event) => setStaffId(event.target.value)} className="form-control disabled:opacity-60"><option value="">Pa llogari aplikacioni</option>{courierAccounts.map((account) => <option key={account.id} value={account.id}>{account.full_name}</option>)}</select>{canManage && <div className="flex gap-2"><button onClick={() => setActive((value) => !value)} className={`rounded-xl px-3 py-2 text-xs font-black ${active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{active ? 'Aktiv' : 'Joaktiv'}</button><button onClick={save} disabled={saving || (status === driver.status && active === driver.active && staffId === (driver.staff_id ?? ''))} className="rounded-xl bg-[#071b33] px-3 py-2 text-xs font-black text-white disabled:opacity-30">Ruaj</button></div>}</div>
+  );
+}
+
+function ReportsPanel({ shipments, onUpdated }: { shipments: Shipment[]; onUpdated: () => Promise<void> }) {
+  const [savingId, setSavingId] = useState('');
+  const delivered = shipments.filter((shipment) => shipment.status === 'U dorëzua');
+  const collected = shipments.filter((shipment) => shipment.cod_status === 'collected');
+  const metrics = [
+    { label: 'Të ardhura nga transporti', value: `${delivered.reduce((total, shipment) => total + shipment.quoted_price_all, 0)} Lekë`, tone: 'bg-blue-600' },
+    { label: 'COD për t’u mbledhur', value: `${shipments.filter((shipment) => shipment.cod_status === 'pending').reduce((total, shipment) => total + shipment.cod_amount_all, 0)} Lekë`, tone: 'bg-orange-500' },
+    { label: 'COD në dorën e korrierëve', value: `${collected.reduce((total, shipment) => total + shipment.cod_amount_all, 0)} Lekë`, tone: 'bg-emerald-600' },
+    { label: 'COD i mbyllur', value: `${shipments.filter((shipment) => shipment.cod_status === 'settled').reduce((total, shipment) => total + shipment.cod_amount_all, 0)} Lekë`, tone: 'bg-violet-600' },
+  ];
+  async function settle(shipmentId: string) {
+    setSavingId(shipmentId);
+    try {
+      await apiRequest(`/api/staff/shipments/${shipmentId}/cod`, { method: 'PATCH', body: JSON.stringify({ status: 'settled' }) });
+      await onUpdated();
+    } finally { setSavingId(''); }
+  }
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map((metric) => <article key={metric.label} className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><span className={`mb-4 grid size-10 place-items-center rounded-xl text-white ${metric.tone}`}><Banknote className="size-5" /></span><p className="text-2xl font-black">{metric.value}</p><p className="mt-1 text-xs font-bold text-slate-500">{metric.label}</p></article>)}</div>
+      <article className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:p-6">
+        <PanelHeader eyebrow="Arka COD" title={`${collected.length} arkëtime për t’u mbyllur`} />
+        <div className="space-y-3">{collected.map((shipment) => <div key={shipment.id} className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center"><div><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><p className="mt-1 font-black">{shipment.recipient_name} · {shipment.delivery_city}</p><p className="text-xs text-slate-500">Korrieri: {shipment.drivers?.full_name ?? 'Pa korrier'}</p></div><div className="flex items-center gap-4"><p className="text-xl font-black">{shipment.cod_amount_all} Lekë</p><button onClick={() => settle(shipment.id)} disabled={savingId === shipment.id} className="rounded-xl bg-[#071b33] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{savingId === shipment.id ? 'Duke mbyllur...' : 'Mbyll në arkë'}</button></div></div>)}{!collected.length && <EmptyState text="Nuk ka arkëtime të hapura nga korrierët." />}</div>
+      </article>
+    </div>
+  );
+}
+
+type DeliveryProof = {
+  recipient_name: string;
+  signature_data: string;
+  photoUrl: string | null;
+  notes: string | null;
+  cod_collected_all: number;
+  latitude: number | null;
+  longitude: number | null;
+  delivered_at: string;
+};
+
+function ProofDialog({ shipment, onClose, onUpdated }: { shipment: Shipment; onClose: () => void; onUpdated: () => Promise<void> }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing = useRef(false);
+  const [existing, setExisting] = useState<DeliveryProof | null>(null);
+  const [loading, setLoading] = useState(Boolean(shipment.delivery_proofs));
+  const [recipientName, setRecipientName] = useState(shipment.recipient_name);
+  const [notes, setNotes] = useState('');
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [signed, setSigned] = useState(false);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!shipment.delivery_proofs) return;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/staff/shipments/${shipment.id}/proof`);
+        const body = await response.json() as { proof?: DeliveryProof; error?: string };
+        if (body.error) setError(body.error);
+        else setExisting(body.proof ?? null);
+      } finally { setLoading(false); }
+    })();
+  }, [shipment.delivery_proofs, shipment.id]);
+
+  function canvasPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    return { x: (event.clientX - rect.left) * (canvas.width / rect.width), y: (event.clientY - rect.top) * (canvas.height / rect.height) };
+  }
+  function startSignature(event: ReactPointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current!;
+    const point = canvasPoint(event);
+    const context = canvas.getContext('2d')!;
+    drawing.current = true;
+    canvas.setPointerCapture(event.pointerId);
+    context.beginPath();
+    context.moveTo(point.x, point.y);
+    context.lineWidth = 4;
+    context.lineCap = 'round';
+    context.strokeStyle = '#071b33';
+    setSigned(true);
+  }
+  function drawSignature(event: ReactPointerEvent<HTMLCanvasElement>) {
+    if (!drawing.current) return;
+    const point = canvasPoint(event);
+    const context = canvasRef.current!.getContext('2d')!;
+    context.lineTo(point.x, point.y);
+    context.stroke();
+  }
+  function clearSignature() {
+    const canvas = canvasRef.current!;
+    canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height);
+    setSigned(false);
+  }
+  function captureLocation() {
+    navigator.geolocation.getCurrentPosition(
+      (position) => { setLatitude(position.coords.latitude); setLongitude(position.coords.longitude); },
+      () => setError('Vendndodhja nuk u lexua. Lejoni aksesin GPS.'),
+      { enableHighAccuracy: true, timeout: 12000 },
+    );
+  }
+  async function submit(event: SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!signed || !canvasRef.current) return setError('Marrësi duhet të firmosë para konfirmimit.');
+    setSaving(true); setError('');
+    const form = new FormData();
+    form.set('recipientName', recipientName);
+    form.set('signatureData', canvasRef.current.toDataURL('image/png'));
+    form.set('notes', notes);
+    form.set('codCollected', String(shipment.cod_amount_all));
+    if (latitude !== null) form.set('latitude', String(latitude));
+    if (longitude !== null) form.set('longitude', String(longitude));
+    if (photo) form.set('photo', photo);
+    try {
+      const response = await fetch(`/api/staff/shipments/${shipment.id}/proof`, { method: 'POST', body: form });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? 'Dorëzimi nuk u ruajt.');
+      await onUpdated();
+    } catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Dorëzimi nuk u ruajt.'); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-end bg-[#071b33]/75 backdrop-blur-sm md:place-items-center md:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <dialog open className="m-0 max-h-[95vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 text-[#10233d] md:m-auto md:max-w-2xl md:rounded-3xl md:p-7">
+        <div className="flex items-start justify-between"><div><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><h2 className="mt-1 text-2xl font-black">Prova e dorëzimit</h2></div><button onClick={onClose} className="grid size-10 place-items-center rounded-xl bg-slate-100" aria-label="Mbyll"><X className="size-5" /></button></div>
+        {loading ? <p className="py-16 text-center font-bold text-slate-500">Duke ngarkuar...</p> : existing ? (
+          <div className="mt-6 space-y-5"><div className="rounded-2xl bg-emerald-50 p-5 text-emerald-900"><p className="text-xs font-black uppercase tracking-widest">Dorëzuar</p><p className="mt-2 text-xl font-black">Marrë nga {existing.recipient_name}</p><p className="mt-1 text-sm">{formatDate(existing.delivered_at)}</p></div>{existing.photoUrl && <Image src={existing.photoUrl} alt="Foto e dorëzimit" width={900} height={600} unoptimized className="max-h-72 w-full rounded-2xl object-cover" />}<div><p className="mb-2 text-xs font-black uppercase tracking-widest text-slate-400">Firma</p><Image src={existing.signature_data} alt={`Firma e ${existing.recipient_name}`} width={640} height={220} unoptimized className="h-36 w-full rounded-xl border bg-white object-contain" /></div>{existing.notes && <p className="rounded-xl bg-slate-50 p-4 text-sm">{existing.notes}</p>}{existing.cod_collected_all > 0 && <p className="font-black text-emerald-700">U mblodhën {existing.cod_collected_all} Lekë COD</p>}</div>
+        ) : (
+          <form onSubmit={submit} className="mt-6 space-y-4">
+            <FormField label="Emri i personit që merr pakon"><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} className="form-control" required /></FormField>
+            <div><div className="mb-2 flex items-center justify-between"><p className="text-sm font-bold">Firma e marrësit</p><button type="button" onClick={clearSignature} className="text-xs font-black text-orange-600">Pastro</button></div><canvas ref={canvasRef} width={640} height={220} onPointerDown={startSignature} onPointerMove={drawSignature} onPointerUp={() => { drawing.current = false; }} onPointerCancel={() => { drawing.current = false; }} className="h-44 w-full touch-none rounded-xl border-2 border-dashed border-slate-300 bg-slate-50" /></div>
+            <FormField label="Foto në derë (opsionale)"><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} className="form-control" /></FormField>
+            <FormField label="Shënim (opsional)"><textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="form-control min-h-20" /></FormField>
+            <div className="flex flex-col justify-between gap-3 rounded-xl bg-slate-50 p-4 sm:flex-row sm:items-center"><div><p className="text-sm font-black">GPS i dorëzimit</p><p className="text-xs text-slate-500">{latitude && longitude ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` : 'Ende pa koordinata'}</p></div><button type="button" onClick={captureLocation} className="rounded-xl bg-white px-4 py-2 text-sm font-black ring-1 ring-slate-200">Merr GPS</button></div>
+            {shipment.cod_amount_all > 0 && <div className="rounded-xl bg-orange-50 p-4"><p className="text-xs font-black uppercase tracking-widest text-orange-600">Për t’u mbledhur</p><p className="mt-1 text-2xl font-black text-orange-800">{shipment.cod_amount_all} Lekë</p></div>}
+            {error && <p className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>}
+            <button disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-4 font-black text-white disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <><CheckCircle2 className="size-5" /> Konfirmo dorëzimin</>}</button>
+          </form>
+        )}
+      </dialog>
+    </div>
   );
 }
 

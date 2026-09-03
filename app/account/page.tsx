@@ -38,8 +38,11 @@ type CustomerShipment = {
   service: string;
   status: string;
   quoted_price_all: number;
+  cod_amount_all: number;
+  cod_status: 'not_required' | 'pending' | 'collected' | 'settled';
   created_at: string;
   tracking_events: TrackingEvent[];
+  delivery_proofs: { recipient_name: string; delivered_at: string; cod_collected_all: number } | null;
 };
 type AccountData = { customer: Customer; shipments: CustomerShipment[] };
 
@@ -191,7 +194,7 @@ function ShipmentCard({ shipment }: { shipment: CustomerShipment }) {
   const events = [...shipment.tracking_events].sort((first, second) => +new Date(second.created_at) - +new Date(first.created_at));
   return (
     <article className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-      <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-start"><div><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><h3 className="mt-2 text-lg font-black">{shipment.pickup_city} <ArrowRight className="mx-1 inline size-4" /> {shipment.delivery_city}</h3><p className="mt-1 text-sm text-slate-500">Për {shipment.recipient_name} · {shipment.delivery_address}</p></div><div className="sm:text-right"><span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-200">{shipment.status}</span><p className="mt-2 font-black">{shipment.quoted_price_all} Lekë</p></div></div>
+      <div className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-start"><div><p className="font-mono text-xs font-black text-orange-600">{shipment.tracking_code}</p><h3 className="mt-2 text-lg font-black">{shipment.pickup_city} <ArrowRight className="mx-1 inline size-4" /> {shipment.delivery_city}</h3><p className="mt-1 text-sm text-slate-500">Për {shipment.recipient_name} · {shipment.delivery_address}</p>{shipment.delivery_proofs && <p className="mt-2 text-xs font-black text-emerald-700">Marrë nga {shipment.delivery_proofs.recipient_name} më {formatDate(shipment.delivery_proofs.delivered_at)}</p>}</div><div className="sm:text-right"><span className="inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-200">{shipment.status}</span><p className="mt-2 font-black">{shipment.quoted_price_all} Lekë</p>{shipment.cod_amount_all > 0 && <p className="mt-1 text-xs font-black text-orange-600">COD {shipment.cod_amount_all} Lekë · {shipment.cod_status}</p>}</div></div>
       <div className="border-t border-slate-100 bg-slate-50 p-5">
         <p className="mb-4 text-xs font-black uppercase tracking-[0.16em] text-slate-400">Historiku</p>
         <div className="space-y-4">

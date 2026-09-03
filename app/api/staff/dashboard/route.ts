@@ -12,14 +12,25 @@ export async function GET(request: NextRequest) {
   if (!staff) return unauthorizedResponse();
 
   const supabase = getSupabaseAdmin();
-  const [shipmentsResult, quotesResult, driversResult, staffResult] = await Promise.all([
-    supabase
+  let shipmentsQuery = supabase
       .from('shipments')
       .select(
-        'id, tracking_code, sender_name, sender_phone, recipient_name, recipient_phone, pickup_city, delivery_city, delivery_address, package_type, weight_kg, service, status, quoted_price_all, driver_id, created_at, drivers(full_name)',
+        'id, tracking_code, sender_name, sender_phone, recipient_name, recipient_phone, pickup_city, delivery_city, delivery_address, package_type, weight_kg, service, status, quoted_price_all, cod_amount_all, cod_status, driver_id, created_at, drivers(full_name), delivery_proofs(recipient_name, delivered_at, cod_collected_all)',
       )
       .order('created_at', { ascending: false })
-      .limit(200),
+      .limit(200);
+
+  if (staff.role === 'courier') {
+    const { data: driver } = await supabase
+      .from('drivers')
+      .select('id')
+      .eq('staff_id', staff.id)
+      .maybeSingle();
+    shipmentsQuery = shipmentsQuery.eq('driver_id', driver?.id ?? crypto.randomUUID());
+  }
+
+  const [shipmentsResult, quotesResult, driversResult, staffResult] = await Promise.all([
+    shipmentsQuery,
     supabase
       .from('quote_requests')
       .select(
@@ -29,7 +40,7 @@ export async function GET(request: NextRequest) {
       .limit(200),
     supabase
       .from('drivers')
-      .select('id, full_name, phone, status, active, created_at')
+      .select('id, full_name, phone, status, active, staff_id, created_at')
       .order('full_name'),
     supabase
       .from('staff_profiles')
@@ -51,8 +62,8 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     staff,
     shipments: shipmentsResult.data ?? [],
-    quotes: quotesResult.data ?? [],
-    drivers: driversResult.data ?? [],
-    staffAccounts: staffResult.data ?? [],
+    quotes: staff.role === 'courier' ? [] : quotesResult.data ?? [],
+    drivers: staff.role === 'courier' ? (driversResult.data ?? []).filter((driver) => driver.staff_id === staff.id) : driversResult.data ?? [],
+    staffAccounts: staff.role === 'courier' ? [] : staffResult.data ?? [],
   });
 }

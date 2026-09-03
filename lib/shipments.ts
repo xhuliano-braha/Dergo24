@@ -11,6 +11,7 @@ export const shipmentSchema = z.object({
   packageType: z.enum(['Dokumente', 'Pako', 'E brishtë', 'Tjetër']),
   weight: z.coerce.number().positive().max(100),
   service: z.enum(['standard', 'express']),
+  codAmount: z.coerce.number().int().min(0).max(1000000).default(0),
 });
 
 export type ShipmentInput = z.infer<typeof shipmentSchema>;

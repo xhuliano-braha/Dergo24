@@ -22,7 +22,11 @@ export async function PATCH(
   const { id } = await params;
   const { error } = await getSupabaseAdmin()
     .from('drivers')
-    .update(parsed.data)
+    .update({
+      status: parsed.data.status,
+      active: parsed.data.active,
+      staff_id: parsed.data.staffId,
+    })
     .eq('id', id);
   if (error)
     return NextResponse.json(

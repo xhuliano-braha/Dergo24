@@ -7,7 +7,7 @@ export type StaffProfile = {
   id: string;
   fullName: string;
   email: string;
-  role: 'admin' | 'dispatcher' | 'support';
+  role: 'admin' | 'dispatcher' | 'support' | 'courier';
 };
 
 export async function getAuthenticatedStaff(request: NextRequest) {

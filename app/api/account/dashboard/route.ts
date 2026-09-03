@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await getSupabaseAdmin()
     .from('shipments')
     .select(
-      'id, tracking_code, recipient_name, pickup_city, delivery_city, delivery_address, package_type, weight_kg, service, status, quoted_price_all, created_at, tracking_events(status, location, details, latitude, longitude, created_at)',
+      'id, tracking_code, recipient_name, pickup_city, delivery_city, delivery_address, package_type, weight_kg, service, status, quoted_price_all, cod_amount_all, cod_status, created_at, tracking_events(status, location, details, latitude, longitude, created_at), delivery_proofs(recipient_name, delivered_at, cod_collected_all)',
     )
     .eq('customer_id', customer.id)
     .order('created_at', { ascending: false });

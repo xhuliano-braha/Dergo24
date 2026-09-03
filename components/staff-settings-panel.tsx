@@ -7,7 +7,7 @@ export type StaffAccount = {
   id: string;
   full_name: string;
   email: string;
-  role: 'admin' | 'dispatcher' | 'support';
+  role: 'admin' | 'dispatcher' | 'support' | 'courier';
   active: boolean;
   created_at: string;
 };
@@ -16,7 +16,7 @@ type CurrentStaff = {
   id: string;
   fullName: string;
   email: string;
-  role: 'admin' | 'dispatcher' | 'support';
+  role: 'admin' | 'dispatcher' | 'support' | 'courier';
 };
 
 async function apiRequest(url: string, options?: RequestInit) {
@@ -44,7 +44,7 @@ export function StaffSettingsPanel({
       <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:p-6">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-500">Aksesi i ekipit</p>
         <h2 className="mt-1 text-2xl font-black">Stafi dhe rolet</h2>
-        <p className="mt-2 text-sm text-slate-500">Administratorët menaxhojnë gjithçka, dispeçerët operacionet, ndërsa suporti dërgesat dhe ofertat.</p>
+        <p className="mt-2 text-sm text-slate-500">Administratorët menaxhojnë gjithçka, dispeçerët operacionet, suporti klientët, ndërsa korrierët shohin vetëm dërgesat e tyre.</p>
         <div className="mt-6 space-y-3">
           {accounts.map((account) => (
             <StaffAccountRow
@@ -115,7 +115,7 @@ function StaffAccountRow({
         <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-black ${active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{active ? 'Aktiv' : 'Joaktiv'}</span>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-[160px_1fr_auto_auto]">
-        <select aria-label={`Roli për ${account.full_name}`} disabled={!canManage} value={role} onChange={(event) => setRole(event.target.value as StaffAccount['role'])} className="form-control disabled:opacity-60"><option value="admin">Administrator</option><option value="dispatcher">Dispeçer</option><option value="support">Suport</option></select>
+        <select aria-label={`Roli për ${account.full_name}`} disabled={!canManage} value={role} onChange={(event) => setRole(event.target.value as StaffAccount['role'])} className="form-control disabled:opacity-60"><option value="admin">Administrator</option><option value="dispatcher">Dispeçer</option><option value="support">Suport</option><option value="courier">Korrier</option></select>
         <input aria-label={`Fjalëkalim i ri për ${account.full_name}`} disabled={!canManage} type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} className="form-control disabled:opacity-60" placeholder="Fjalëkalim i ri (opsional)" minLength={8} />
         {canManage && <button onClick={() => setActive((value) => !value)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-black">{active ? 'Çaktivizo' : 'Aktivizo'}</button>}
         {canManage && <button onClick={save} disabled={saving} className="rounded-xl bg-[#071b33] px-4 py-2 text-xs font-black text-white disabled:opacity-60">{saving ? 'Duke ruajtur...' : 'Ruaj'}</button>}
@@ -146,7 +146,7 @@ function CreateStaffCard({ onCreated }: { onCreated: () => Promise<void> }) {
       <p className="mt-1 text-sm text-slate-400">Përdorues ose email, rol dhe fjalëkalim fillestar.</p>
       <label htmlFor="new-staff-name" className="mt-5 block text-sm font-bold">Emri</label><input id="new-staff-name" value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} className="staff-dark-control" required />
       <label htmlFor="new-staff-login" className="mt-4 block text-sm font-bold">Përdoruesi</label><input id="new-staff-login" value={form.login} onChange={(event) => setForm({ ...form, login: event.target.value })} className="staff-dark-control" placeholder="p.sh. dispecer1" required />
-      <label htmlFor="new-staff-role" className="mt-4 block text-sm font-bold">Roli</label><select id="new-staff-role" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} className="staff-dark-control"><option value="dispatcher">Dispeçer</option><option value="support">Suport</option><option value="admin">Administrator</option></select>
+      <label htmlFor="new-staff-role" className="mt-4 block text-sm font-bold">Roli</label><select id="new-staff-role" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} className="staff-dark-control"><option value="dispatcher">Dispeçer</option><option value="support">Suport</option><option value="courier">Korrier</option><option value="admin">Administrator</option></select>
       <label htmlFor="new-staff-password" className="mt-4 block text-sm font-bold">Fjalëkalimi</label><input id="new-staff-password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="staff-dark-control" minLength={8} required />
       {message && <p className="mt-3 text-xs font-semibold text-slate-300">{message}</p>}
       <button disabled={saving} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 font-black disabled:opacity-60">{saving ? <RefreshCw className="size-4 animate-spin" /> : 'Krijo llogarinë'}</button>

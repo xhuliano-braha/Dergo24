@@ -20,6 +20,7 @@ export const shipmentUpdateSchema = z.object({
   details: z.string().trim().min(3).max(300),
   latitude: z.number().min(-90).max(90).nullable(),
   longitude: z.number().min(-180).max(180).nullable(),
+  codStatus: z.enum(['not_required', 'pending', 'collected', 'settled']),
 });
 
 export const driverCreateSchema = z.object({
@@ -30,6 +31,7 @@ export const driverCreateSchema = z.object({
 export const driverUpdateSchema = z.object({
   status: z.enum(['available', 'assigned', 'off_duty']),
   active: z.boolean(),
+  staffId: z.uuid().nullable(),
 });
 
 export const quoteUpdateSchema = z.object({

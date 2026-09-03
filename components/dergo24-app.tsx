@@ -106,6 +106,7 @@ const initialForm = {
   packageType: 'Pako',
   weight: '1',
   service: 'standard',
+  codAmount: '0',
 };
 const initialQuote = {
   customerName: '',
@@ -981,6 +982,16 @@ function BookingModal({
                 min="0.1"
                 max="100"
                 step="0.1"
+              />
+              <FormInput
+                label="Pagesë në dorëzim (Lekë)"
+                value={form.codAmount}
+                onChange={(v) => field('codAmount', v)}
+                type="number"
+                min="0"
+                max="1000000"
+                step="1"
+                placeholder="0"
               />
             </div>
             <p className="mb-3 mt-6 text-sm font-bold">Shërbimi</p>
