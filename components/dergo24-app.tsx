@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   ArrowRight,
   Check,
+  Clock3,
   Headphones,
   MapPin,
   Menu,
@@ -14,6 +15,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Truck,
   UserRound,
   X,
 } from 'lucide-react';
@@ -116,6 +118,7 @@ const initialQuote = {
 
 export function Dergo24App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [trackingCode, setTrackingCode] = useState('');
   const [tracking, setTracking] = useState<TrackingResult | null>(null);
@@ -137,6 +140,29 @@ export function Dergo24App() {
       Math.max(0, Math.ceil(Number(form.weight) || 1) - 1) * 100,
     [form.service, form.weight],
   );
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 24);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const elements = document.querySelectorAll<HTMLElement>('[data-reveal]');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.12 },
+    );
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const context = (
@@ -288,9 +314,9 @@ export function Dergo24App() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden">
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-black/5 bg-white/92 backdrop-blur-xl">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 lg:px-8">
+    <main className="min-h-screen overflow-hidden bg-[#fafbfc]">
+      <header className={`fixed inset-x-0 top-0 z-40 border-b transition-all duration-500 ${scrolled ? 'border-slate-200/80 bg-white/90 shadow-[0_10px_45px_rgba(7,27,51,.08)] backdrop-blur-2xl' : 'border-transparent bg-white/95 backdrop-blur-xl'}`}>
+        <div className={`mx-auto flex max-w-7xl items-center justify-between px-5 transition-all duration-500 lg:px-8 ${scrolled ? 'h-16' : 'h-20'}`}>
           <a
             href="#top"
             className="flex items-center gap-2.5"
@@ -299,10 +325,10 @@ export function Dergo24App() {
             <Logo />
           </a>
           <nav className="hidden items-center gap-8 text-sm font-semibold lg:flex">
-            <a href="#sherbimet">Shërbimet</a>
-            <a href="#si-funksionon">Si funksionon</a>
-            <a href="#mbulim">Mbulimi</a>
-            <a href="#kontakt">Kontakt</a>
+            <a className="relative transition-colors after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-primary after:transition-all hover:text-primary hover:after:w-full" href="#sherbimet">Shërbimet</a>
+            <a className="relative transition-colors after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-primary after:transition-all hover:text-primary hover:after:w-full" href="#si-funksionon">Si funksionon</a>
+            <a className="relative transition-colors after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-primary after:transition-all hover:text-primary hover:after:w-full" href="#mbulim">Mbulimi</a>
+            <a className="relative transition-colors after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-primary after:transition-all hover:text-primary hover:after:w-full" href="#kontakt">Kontakt</a>
           </nav>
           <div className="hidden items-center gap-3 lg:flex">
             <Link
@@ -319,7 +345,7 @@ export function Dergo24App() {
               Gjurmo pakon
             </Button>
             <Button
-              className="h-11 rounded-xl px-5 shadow-[0_8px_24px_rgba(244,90,10,.22)]"
+              className="shine-button h-11 rounded-xl px-5 shadow-[0_8px_24px_rgba(244,90,10,.22)] hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(244,90,10,.3)]"
               onClick={() => setBookingOpen(true)}
             >
               Dërgo tani <ArrowRight />
@@ -334,7 +360,7 @@ export function Dergo24App() {
           </button>
         </div>
         {menuOpen && (
-          <nav className="border-t bg-white px-5 py-5 lg:hidden">
+          <nav className="animate-in slide-in-from-top-3 border-t bg-white/95 px-5 py-5 shadow-2xl backdrop-blur-2xl duration-300 lg:hidden">
             <div className="flex flex-col gap-4 font-semibold">
               <a href="#sherbimet" onClick={() => setMenuOpen(false)}>
                 Shërbimet
@@ -360,9 +386,11 @@ export function Dergo24App() {
       </header>
 
       <section id="top" className="relative bg-[#071b38] pt-20 text-white">
+        <div className="premium-grid pointer-events-none absolute inset-0" />
+        <div className="premium-glow pointer-events-none absolute -left-40 top-20 size-[520px]" />
         <div className="mx-auto grid min-h-[760px] max-w-[1500px] lg:grid-cols-[1.05fr_.95fr]">
           <div className="flex items-center px-5 py-20 lg:px-[max(2rem,calc((100vw-1280px)/2))] lg:pr-12">
-            <div className="max-w-2xl">
+            <div className="relative z-10 max-w-2xl" data-reveal="left">
               <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-[.12em] text-primary">
                 <Sparkles className="size-3.5" /> Shpejt. Sigurt. Kudo.
               </div>
@@ -376,14 +404,14 @@ export function Dergo24App() {
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Button
-                  className="h-14 rounded-xl px-7 text-base font-bold shadow-[0_12px_34px_rgba(247,91,18,.28)]"
+                  className="shine-button h-14 rounded-xl px-7 text-base font-bold shadow-[0_12px_34px_rgba(247,91,18,.28)] hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(247,91,18,.38)]"
                   onClick={() => setBookingOpen(true)}
                 >
                   Dërgo një pako <ArrowRight className="size-5" />
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-14 rounded-xl border-white/20 bg-white/5 px-7 text-base font-bold text-white hover:bg-white/10 hover:text-white"
+                  className="h-14 rounded-xl border-white/20 bg-white/5 px-7 text-base font-bold text-white backdrop-blur-md hover:-translate-y-1 hover:border-white/35 hover:bg-white/10 hover:text-white"
                   onClick={() => setQuoteOpen(true)}
                 >
                   Kërko ofertë transporti
@@ -396,15 +424,22 @@ export function Dergo24App() {
               </div>
             </div>
           </div>
-          <div className="relative min-h-[560px] overflow-hidden lg:min-h-full">
+          <div className="relative min-h-[560px] overflow-hidden lg:min-h-full" data-reveal="right">
             <Image
               src="/dergo24-doorstep.jpeg"
               alt="Korrieri Dërgo24 dorëzon një pako në adresën e klientit"
               width={818}
               height={1280}
-              className="absolute inset-0 size-full object-cover object-top"
+              className="hero-media absolute inset-0 size-full object-cover object-top"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#071b38]/75 via-transparent to-[#071b38]/10" />
             <div className="absolute inset-y-0 left-0 hidden w-24 bg-gradient-to-r from-[#071b38] to-transparent lg:block" />
+            <div className="float-slow absolute bottom-10 left-5 right-5 rounded-2xl border border-white/20 bg-[#071b38]/75 p-4 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-8 sm:w-72">
+              <div className="flex items-center gap-3">
+                <span className="grid size-11 place-items-center rounded-xl bg-primary text-white"><Truck className="size-5" /></span>
+                <div><p className="text-xs font-bold uppercase tracking-[.14em] text-white/50">Në lëvizje</p><p className="mt-1 font-black">Shqipëria, derë më derë.</p></div>
+              </div>
+            </div>
             <div className="absolute inset-x-0 bottom-0 h-2 bg-primary" />
           </div>
         </div>
@@ -413,8 +448,10 @@ export function Dergo24App() {
       <section
         id="gjurmo"
         className="relative z-10 mx-auto -mt-16 max-w-6xl px-5 lg:px-8"
+        data-reveal
       >
-        <div className="rounded-3xl border border-white/10 bg-[#071b38] p-5 text-white shadow-[0_24px_80px_rgba(7,27,56,.25)] sm:p-8">
+        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#071b38]/95 p-5 text-white shadow-[0_30px_100px_rgba(7,27,56,.3)] backdrop-blur-2xl sm:p-8">
+          <div className="premium-glow pointer-events-none absolute -right-28 -top-36 size-80 opacity-60" />
           <div className="grid gap-6 lg:grid-cols-[.8fr_1.4fr] lg:items-center">
             <div>
               <p className="text-xs font-bold uppercase tracking-[.15em] text-white/50">
@@ -498,14 +535,31 @@ export function Dergo24App() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-5 pb-4 pt-12 lg:px-8">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { icon: Clock3, value: '24–48 orë', label: 'Dërgesa standarde' },
+            { icon: MapPin, value: '61 bashki', label: 'Mbulim në Shqipëri' },
+            { icon: PackageCheck, value: 'Online', label: 'Gjurmim i çdo pakoje' },
+          ].map((stat, index) => (
+            <div key={stat.label} data-reveal className={`premium-card stagger-${index + 1} flex items-center gap-4 rounded-2xl border border-slate-200/70 bg-white/80 p-5 backdrop-blur-xl`}>
+              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-orange-50 text-primary"><stat.icon className="size-5" /></span>
+              <div><p className="text-lg font-black tracking-tight text-[#071b33]">{stat.value}</p><p className="mt-0.5 text-xs font-semibold text-slate-500">{stat.label}</p></div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section id="sherbimet" className="mx-auto max-w-7xl px-5 py-28 lg:px-8">
+        <div data-reveal>
         <SectionTitle
           eyebrow="Jo vetëm pako"
           title="Transportojmë çdo gjë me kujdes."
           copy="Dy mënyra të qarta rezervimi: çmim i menjëhershëm për pako dhe ofertë e personalizuar për ngarkesa të mëdha."
         />
+        </div>
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          <article className="overflow-hidden rounded-3xl border bg-white shadow-sm">
+          <article data-reveal="left" className="premium-card overflow-hidden rounded-3xl border bg-white">
             <div className="grid sm:grid-cols-[.9fr_1.1fr]">
               <Image
                 src="/dergo24-fragile.jpeg"
@@ -539,7 +593,7 @@ export function Dergo24App() {
               </div>
             </div>
           </article>
-          <article className="overflow-hidden rounded-3xl bg-[#071b38] text-white shadow-sm">
+          <article data-reveal="right" className="premium-card overflow-hidden rounded-3xl border border-white/5 bg-[#071b38] text-white">
             <div className="grid sm:grid-cols-[.9fr_1.1fr]">
               <Image
                 src="/dergo24-large-items.jpeg"
@@ -576,9 +630,11 @@ export function Dergo24App() {
         </div>
       </section>
 
-      <section id="si-funksionon" className="bg-[#071b38] py-28 text-white">
+      <section id="si-funksionon" className="relative overflow-hidden bg-[#071b38] py-28 text-white">
+        <div className="premium-grid pointer-events-none absolute inset-0 opacity-70" />
+        <div className="premium-glow pointer-events-none absolute -bottom-64 -right-48 size-[620px]" />
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-end">
+          <div className="relative grid gap-10 lg:grid-cols-2 lg:items-end" data-reveal>
             <div>
               <p className="text-xs font-bold uppercase tracking-[.16em] text-primary">
                 E thjeshtë nga fillimi
@@ -592,7 +648,7 @@ export function Dergo24App() {
               te adresa jote dhe ti e ndjek pakon deri në dorëzim.
             </p>
           </div>
-          <div className="mt-16 grid gap-10 md:grid-cols-3">
+          <div className="relative mt-16 grid gap-5 md:grid-cols-3">
             {[
               {
                 no: '01',
@@ -615,9 +671,10 @@ export function Dergo24App() {
             ].map((step) => (
               <div
                 key={step.no}
-                className="relative border-t border-white/15 pt-7"
+                data-reveal
+                className={`premium-card stagger-${Number(step.no)} relative rounded-3xl border border-white/10 bg-white/[.045] p-7 backdrop-blur-sm`}
               >
-                <span className="absolute right-0 top-5 font-mono text-5xl font-black text-white/[.06]">
+                <span className="absolute right-6 top-5 font-mono text-5xl font-black text-white/[.06]">
                   {step.no}
                 </span>
                 <step.icon className="size-7 text-primary" />
@@ -631,7 +688,7 @@ export function Dergo24App() {
 
       <section id="mbulim" className="paper-grid py-24">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <div className="rounded-[2rem] border bg-white/90 p-7 shadow-sm md:p-12">
+          <div data-reveal className="premium-card rounded-[2rem] border bg-white/90 p-7 md:p-12">
             <div className="grid gap-10 lg:grid-cols-[1fr_.9fr] lg:items-center">
               <div>
                 <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-[.13em] text-primary">
@@ -648,7 +705,7 @@ export function Dergo24App() {
                   {cities.slice(0, 14).map((city) => (
                     <span
                       key={city}
-                      className="rounded-full border bg-background px-3 py-1.5 text-sm font-semibold"
+                      className="rounded-full border bg-background px-3 py-1.5 text-sm font-semibold transition duration-300 hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700"
                     >
                       {city}
                     </span>
@@ -658,7 +715,7 @@ export function Dergo24App() {
                   </span>
                 </div>
               </div>
-              <div className="relative overflow-hidden rounded-3xl bg-[#071b38]">
+              <div className="gallery-card relative overflow-hidden rounded-3xl bg-[#071b38]">
                 <Image
                   src="/dergo24-albania.jpeg"
                   alt="Dërgo24 transporton në çdo qytet të Shqipërisë"
@@ -685,18 +742,39 @@ export function Dergo24App() {
 
       <section className="bg-white py-24">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <div data-reveal>
           <SectionTitle
             eyebrow="Ekipi Dergo24"
             title="Nga marrja deri te buzëqeshja."
             copy="Automjete dhe korrierë të identifikueshëm, kujdes në ngarkim dhe dorëzim direkt në adresë."
           />
-          <div className="mt-12 grid gap-5 md:grid-cols-2">
-            <div className="overflow-hidden rounded-3xl bg-[#071b33]">
-              <Image src="/dergo24-loading.jpeg" alt="Ekipi Dërgo24 ngarkon porositë në automjet" width={1024} height={1280} className="h-[560px] w-full object-cover" />
+          </div>
+          <div className="mt-12 grid gap-5 md:grid-cols-[1.1fr_.9fr]">
+            <div data-reveal="left" className="gallery-card group relative overflow-hidden rounded-3xl bg-[#071b33]">
+              <Image src="/dergo24-loading.jpeg" alt="Ekipi Dërgo24 ngarkon porositë në automjet" width={1024} height={1280} className="h-[620px] w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#071b33]/80 via-transparent to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-7 text-white"><p className="text-xs font-bold uppercase tracking-[.16em] text-orange-300">Marrje e kujdesshme</p><p className="mt-2 text-2xl font-black">Çdo pako nis e sigurt.</p></div>
             </div>
-            <div className="overflow-hidden rounded-3xl bg-[#071b33]">
-              <Image src="/dergo24-smile-delivery.jpeg" alt="Korrieri Dërgo24 dorëzon porosinë te klienti" width={1024} height={1280} className="h-[560px] w-full object-cover" />
+            <div data-reveal="right" className="gallery-card group relative overflow-hidden rounded-3xl bg-[#071b33] md:mt-16">
+              <Image src="/dergo24-smile-delivery.jpeg" alt="Korrieri Dërgo24 dorëzon porosinë te klienti" width={1024} height={1280} className="h-[540px] w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#071b33]/80 via-transparent to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-7 text-white"><p className="text-xs font-bold uppercase tracking-[.16em] text-orange-300">Dorëzim personal</p><p className="mt-2 text-2xl font-black">Deri në derën tuaj.</p></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white px-5 pb-24 lg:px-8">
+        <div data-reveal className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-primary px-6 py-12 text-white shadow-[0_30px_90px_rgba(244,90,10,.25)] md:px-12 md:py-14">
+          <div className="premium-grid pointer-events-none absolute inset-0 opacity-40" />
+          <div className="relative flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
+            <div className="max-w-2xl">
+              <p className="text-xs font-bold uppercase tracking-[.18em] text-white/70">Gati kur jeni ju</p>
+              <h2 className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-5xl">Pakoja juaj meriton një udhëtim më të mirë.</h2>
+            </div>
+            <Button onClick={() => setBookingOpen(true)} className="shine-button h-14 shrink-0 rounded-xl bg-white px-7 text-base font-black text-[#071b33] shadow-xl hover:-translate-y-1 hover:bg-white/95">
+              Rezervo dërgesën <ArrowRight className="size-5" />
+            </Button>
           </div>
         </div>
       </section>
