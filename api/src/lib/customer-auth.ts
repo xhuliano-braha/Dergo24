@@ -1,40 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from './supabase-admin';
+import { accountService } from '../services/account.service';
 
 export const CUSTOMER_SESSION_COOKIE = 'dergo24_customer_session';
 
-export type CustomerProfile = {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-};
+export type { CustomerProfile } from '../types/profiles';
 
 export async function getAuthenticatedCustomer(request: NextRequest) {
   const accessToken = request.cookies.get(CUSTOMER_SESSION_COOKIE)?.value;
   if (!accessToken) return null;
 
-  const authClient = getSupabaseAdmin();
-  const {
-    data: { user },
-    error: userError,
-  } = await authClient.auth.getUser(accessToken);
-  if (userError || !user) return null;
-
-  const { data: profile, error: profileError } = await getSupabaseAdmin()
-    .from('customer_profiles')
-    .select('id, full_name, email, phone, active')
-    .eq('id', user.id)
-    .eq('active', true)
-    .maybeSingle();
-  if (profileError || !profile) return null;
-
-  return {
-    id: profile.id,
-    fullName: profile.full_name,
-    email: profile.email,
-    phone: profile.phone,
-  } as CustomerProfile;
+  return accountService.customerFromToken(accessToken);
 }
 
 export function setCustomerSession(

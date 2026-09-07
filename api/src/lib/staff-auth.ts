@@ -1,41 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from './supabase-admin';
+import { accountService } from '../services/account.service';
 
 export const STAFF_SESSION_COOKIE = 'dergo24_staff_session';
 
-export type StaffProfile = {
-  id: string;
-  fullName: string;
-  email: string;
-  role: 'admin' | 'dispatcher' | 'support' | 'courier';
-};
+export type { StaffProfile } from '../types/profiles';
 
 export async function getAuthenticatedStaff(request: NextRequest) {
   const accessToken = request.cookies.get(STAFF_SESSION_COOKIE)?.value;
   if (!accessToken) return null;
 
-  const authClient = getSupabaseAdmin();
-  const {
-    data: { user },
-    error: userError,
-  } = await authClient.auth.getUser(accessToken);
-  if (userError || !user) return null;
-
-  const { data: profile, error: profileError } = await getSupabaseAdmin()
-    .from('staff_profiles')
-    .select('id, full_name, email, role, active')
-    .eq('id', user.id)
-    .eq('active', true)
-    .maybeSingle();
-
-  if (profileError || !profile) return null;
-
-  return {
-    id: profile.id,
-    fullName: profile.full_name,
-    email: profile.email,
-    role: profile.role,
-  } as StaffProfile;
+  return accountService.staffFromToken(accessToken);
 }
 
 export function setStaffSession(

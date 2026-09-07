@@ -1,0 +1,203 @@
+begin;
+
+create or replace function public.book_shipments_atomic(
+  p_shipments jsonb, p_events jsonb, p_actor uuid default null
+) returns void
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  shipment_input jsonb;
+  event_input jsonb;
+  shipment_row public.shipments%rowtype;
+  event_row public.tracking_events%rowtype;
+  actor_role text;
+  item_index integer;
+begin
+  if jsonb_typeof(p_shipments) is distinct from 'array'
+    or jsonb_typeof(p_events) is distinct from 'array' then
+    raise sqlstate 'PT400' using message = 'Invalid booking payload';
+  end if;
+  if jsonb_array_length(p_shipments) not between 1 and 200
+    or jsonb_array_length(p_shipments) <> jsonb_array_length(p_events) then
+    raise sqlstate 'PT400' using message = 'Invalid booking batch';
+  end if;
+  if p_actor is not null then
+    select role into actor_role from public.staff_profiles
+      where id = p_actor and active for share;
+    if actor_role is null or actor_role not in ('admin', 'dispatcher') then
+      raise sqlstate 'PT403' using message = 'Import permission denied';
+    end if;
+  elsif jsonb_array_length(p_shipments) <> 1 then
+    raise sqlstate 'PT403' using message = 'Staff required for bulk booking';
+  end if;
+
+  for item_index in 0..jsonb_array_length(p_shipments) - 1 loop
+    shipment_input := p_shipments -> item_index;
+    event_input := p_events -> item_index;
+    shipment_row := jsonb_populate_record(null::public.shipments, shipment_input);
+    event_row := jsonb_populate_record(null::public.tracking_events, event_input);
+    if shipment_row.status is distinct from 'Porosia u regjistrua'
+      or event_row.status is distinct from shipment_row.status
+      or event_row.shipment_id is distinct from shipment_row.id
+      or event_row.created_by is distinct from p_actor then
+      raise sqlstate 'PT400' using message = 'Invalid initial tracking event';
+    end if;
+    if shipment_row.cod_status is distinct from
+      (case when shipment_row.cod_amount_all > 0 then 'pending' else 'not_required' end) then
+      raise sqlstate 'PT400' using message = 'Invalid initial COD status';
+    end if;
+    if shipment_row.customer_id is not null and not exists (
+      select 1 from public.customer_profiles where id = shipment_row.customer_id and active
+    ) then
+      raise sqlstate 'PT403' using message = 'Inactive customer';
+    end if;
+    if shipment_row.delivery_method = 'pickup_point' and not exists (
+      select 1 from public.pickup_points where id = shipment_row.pickup_point_id and active
+    ) then
+      raise sqlstate 'PT400' using message = 'Invalid pickup point';
+    end if;
+
+    insert into public.shipments (
+      id, tracking_code, sender_name, sender_phone, recipient_name, recipient_phone,
+      pickup_city, delivery_city, delivery_address, package_type, weight_kg, service,
+      status, quoted_price_all, customer_id, cod_amount_all, cod_status, pickup_date,
+      delivery_window, delivery_method, pickup_point_id, address_validated, created_at, updated_at
+    ) values (
+      shipment_row.id, shipment_row.tracking_code, shipment_row.sender_name, shipment_row.sender_phone,
+      shipment_row.recipient_name, shipment_row.recipient_phone, shipment_row.pickup_city,
+      shipment_row.delivery_city, shipment_row.delivery_address, shipment_row.package_type,
+      shipment_row.weight_kg, shipment_row.service, shipment_row.status, shipment_row.quoted_price_all,
+      shipment_row.customer_id, shipment_row.cod_amount_all, shipment_row.cod_status,
+      shipment_row.pickup_date, shipment_row.delivery_window, shipment_row.delivery_method,
+      shipment_row.pickup_point_id, shipment_row.address_validated,
+      coalesce(shipment_row.created_at, now()), coalesce(shipment_row.created_at, now())
+    );
+    insert into public.tracking_events (
+      id, shipment_id, status, location, details, created_by, created_at
+    ) values (
+      event_row.id, shipment_row.id, shipment_row.status, event_row.location,
+      event_row.details, p_actor, coalesce(shipment_row.created_at, now())
+    );
+  end loop;
+end;
+$$;
+
+create or replace function public.update_shipment_atomic(
+  p_shipment_id uuid, p_actor uuid, p_input jsonb
+) returns void
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  shipment_row public.shipments%rowtype;
+  actor_role text;
+  assigned_driver uuid;
+  next_status text := p_input ->> 'status';
+begin
+  select role into actor_role from public.staff_profiles where id = p_actor and active for share;
+  if actor_role is null or actor_role not in ('admin', 'dispatcher', 'support', 'courier') then
+    raise sqlstate 'PT403' using message = 'Inactive staff';
+  end if;
+  select * into shipment_row from public.shipments where id = p_shipment_id for update;
+  if not found then raise sqlstate 'PT404' using message = 'Shipment not found'; end if;
+  if actor_role = 'courier' then
+    select id into assigned_driver from public.drivers where staff_id = p_actor and active for share;
+    if assigned_driver is null or shipment_row.driver_id is distinct from assigned_driver then
+      raise sqlstate 'PT403' using message = 'Shipment is not assigned to this courier';
+    end if;
+  else
+    assigned_driver := (p_input ->> 'driverId')::uuid;
+    if assigned_driver is not null and not exists (
+      select 1 from public.drivers where id = assigned_driver and active
+    ) then raise sqlstate 'PT400' using message = 'Invalid driver'; end if;
+  end if;
+  if shipment_row.status in ('U dorëzua', 'U anulua') or shipment_row.cod_status = 'settled' then
+    raise sqlstate 'PT409' using message = 'Shipment is closed';
+  end if;
+  if next_status is null or next_status not in (
+    'Porosia u regjistrua', 'Në pritje të marrjes', 'U mor nga korrieri',
+    'Në transport', 'Në shpërndarje', 'U anulua'
+  ) then raise sqlstate 'PT400' using message = 'Use delivery proof to confirm delivery'; end if;
+  if actor_role <> 'courier' and (p_input ->> 'codStatus') is distinct from shipment_row.cod_status then
+    raise sqlstate 'PT400' using message = 'Use delivery or settlement to change COD';
+  end if;
+
+  update public.shipments set status = next_status, driver_id = assigned_driver, updated_at = now()
+    where id = p_shipment_id;
+  insert into public.tracking_events (
+    id, shipment_id, status, location, details, latitude, longitude, created_by
+  ) values (
+    gen_random_uuid(), p_shipment_id, next_status, p_input ->> 'location', p_input ->> 'details',
+    (p_input ->> 'latitude')::double precision, (p_input ->> 'longitude')::double precision, p_actor
+  );
+end;
+$$;
+
+create or replace function public.confirm_delivery_atomic(
+  p_shipment_id uuid, p_actor uuid, p_proof jsonb
+) returns void
+language plpgsql security invoker set search_path = ''
+as $$
+declare
+  shipment_row public.shipments%rowtype;
+  actor_role text;
+  assigned_driver uuid;
+  proof_row public.delivery_proofs%rowtype;
+begin
+  select role into actor_role from public.staff_profiles where id = p_actor and active for share;
+  if actor_role is null or actor_role not in ('admin', 'dispatcher', 'courier') then
+    raise sqlstate 'PT403' using message = 'Delivery permission denied';
+  end if;
+  select * into shipment_row from public.shipments where id = p_shipment_id for update;
+  if not found then raise sqlstate 'PT404' using message = 'Shipment not found'; end if;
+  if actor_role = 'courier' then
+    select id into assigned_driver from public.drivers where staff_id = p_actor and active for share;
+    if assigned_driver is null or shipment_row.driver_id is distinct from assigned_driver then
+      raise sqlstate 'PT403' using message = 'Shipment is not assigned to this courier';
+    end if;
+  end if;
+  if shipment_row.status in ('U dorëzua', 'U anulua') or shipment_row.cod_status = 'settled' then
+    raise sqlstate 'PT409' using message = 'Shipment is closed';
+  end if;
+  proof_row := jsonb_populate_record(null::public.delivery_proofs, p_proof);
+  if proof_row.cod_collected_all is distinct from shipment_row.cod_amount_all then
+    raise sqlstate 'PT400' using message = 'Collected COD must equal shipment COD';
+  end if;
+  if proof_row.recipient_name is null or length(btrim(proof_row.recipient_name)) not between 2 and 80
+    or proof_row.signature_data is null or proof_row.signature_data not like 'data:image/png;base64,%'
+    or length(proof_row.signature_data) > 500000 then
+    raise sqlstate 'PT400' using message = 'Invalid delivery proof';
+  end if;
+  if proof_row.photo_path is not null
+    and proof_row.photo_path not like p_shipment_id::text || '/%' then
+    raise sqlstate 'PT400' using message = 'Invalid photo path';
+  end if;
+
+  insert into public.delivery_proofs (
+    shipment_id, recipient_name, signature_data, photo_path, notes,
+    cod_collected_all, latitude, longitude, recorded_by, delivered_at
+  ) values (
+    p_shipment_id, btrim(proof_row.recipient_name), proof_row.signature_data,
+    proof_row.photo_path, proof_row.notes, proof_row.cod_collected_all,
+    proof_row.latitude, proof_row.longitude, p_actor, now()
+  );
+  update public.shipments set status = 'U dorëzua',
+    cod_status = case when cod_amount_all > 0 then 'collected' else 'not_required' end,
+    updated_at = now() where id = p_shipment_id;
+  insert into public.tracking_events (
+    id, shipment_id, status, location, details, latitude, longitude, created_by
+  ) values (
+    gen_random_uuid(), p_shipment_id, 'U dorëzua', shipment_row.delivery_city,
+    'Dërgesa iu dorëzua ' || btrim(proof_row.recipient_name) || '.',
+    proof_row.latitude, proof_row.longitude, p_actor
+  );
+end;
+$$;
+
+revoke all on function public.book_shipments_atomic(jsonb, jsonb, uuid) from public, anon, authenticated;
+revoke all on function public.update_shipment_atomic(uuid, uuid, jsonb) from public, anon, authenticated;
+revoke all on function public.confirm_delivery_atomic(uuid, uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.book_shipments_atomic(jsonb, jsonb, uuid) to service_role;
+grant execute on function public.update_shipment_atomic(uuid, uuid, jsonb) to service_role;
+grant execute on function public.confirm_delivery_atomic(uuid, uuid, jsonb) to service_role;
+notify pgrst, 'reload schema';
+commit;

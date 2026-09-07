@@ -512,7 +512,8 @@ function ShipmentDialog({ shipment, drivers, staff, onClose, onUpdated, onProof 
   const [driverId, setDriverId] = useState(shipment.driver_id ?? '');
   const [location, setLocation] = useState(shipment.delivery_city);
   const [details, setDetails] = useState('Statusi i dërgesës u përditësua nga stafi i Dergo24.');
-  const [codStatus, setCodStatus] = useState(shipment.cod_status);
+  const codStatus = shipment.cod_status;
+  const closed = ['U dorëzua', 'U anulua'].includes(shipment.status) || codStatus === 'settled';
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
@@ -520,7 +521,9 @@ function ShipmentDialog({ shipment, drivers, staff, onClose, onUpdated, onProof 
   const [error, setError] = useState('');
 
   async function save(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault(); setSaving(true); setError('');
+    event.preventDefault();
+    if (closed) return;
+    setSaving(true); setError('');
     try {
       await apiRequest(`/api/staff/shipments/${shipment.id}`, { method: 'PATCH', body: JSON.stringify({ status, driverId: driverId || null, location, details, latitude, longitude, codStatus }) });
       await onUpdated();
@@ -556,9 +559,9 @@ function ShipmentDialog({ shipment, drivers, staff, onClose, onUpdated, onProof 
         <div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><p className="font-mono text-sm font-black text-orange-600">{shipment.tracking_code}</p><CopyTrackingButton value={shipment.tracking_code} compact /></div><h2 id="shipment-dialog-title" className="mt-1 text-2xl font-black">Menaxho dërgesën</h2></div><button onClick={onClose} className="grid size-10 place-items-center rounded-xl bg-slate-100" aria-label="Mbyll"><X className="size-5" /></button></div>
         <div className="my-6 grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm sm:grid-cols-2"><p><span className="text-slate-500">Dërguesi:</span><br /><strong>{shipment.sender_name}</strong> · {shipment.sender_phone}</p><p><span className="text-slate-500">Marrësi:</span><br /><strong>{shipment.recipient_name}</strong> · {shipment.recipient_phone}</p><p><span className="text-slate-500">Itinerari:</span><br /><strong>{shipment.pickup_city} → {shipment.delivery_city}</strong></p><p><span className="text-slate-500">Adresa:</span><br /><strong>{shipment.pickup_points?.name ?? shipment.delivery_address}</strong></p><p><span className="text-slate-500">Marrja:</span><br /><strong>{shipment.pickup_date ?? 'Për t’u konfirmuar'}</strong></p><p><span className="text-slate-500">Orari:</span><br /><strong>{shipment.delivery_window === 'anytime' ? 'Gjatë ditës' : shipment.delivery_window}</strong></p></div>
         <form onSubmit={save} className="space-y-4">
-          <FormField label="Statusi"><select value={status} onChange={(event) => setStatus(event.target.value)} className="form-control">{shipmentStatuses.map((item) => <option key={item}>{item}</option>)}</select></FormField>
-          <FormField label="Korrieri"><select disabled={staff.role === 'courier'} value={driverId} onChange={(event) => setDriverId(event.target.value)} className="form-control disabled:opacity-60"><option value="">Pa korrier</option>{drivers.filter((driver) => driver.active).map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name} · {driver.phone}</option>)}</select></FormField>
-          {shipment.cod_amount_all > 0 && <FormField label={`Pagesa në dorëzim · ${shipment.cod_amount_all} Lekë`}><select disabled={staff.role === 'courier'} value={codStatus} onChange={(event) => setCodStatus(event.target.value as Shipment['cod_status'])} className="form-control disabled:opacity-60"><option value="pending">Në pritje</option><option value="collected">U mblodh</option><option value="settled">U mbyll në arkë</option></select></FormField>}
+          <FormField label="Statusi"><select disabled={closed} value={status} onChange={(event) => setStatus(event.target.value)} className="form-control">{shipmentStatuses.filter((item) => item !== 'U dorëzua' || closed).map((item) => <option key={item}>{item}</option>)}</select></FormField>
+          <FormField label="Korrieri"><select disabled={closed || staff.role === 'courier'} value={driverId} onChange={(event) => setDriverId(event.target.value)} className="form-control disabled:opacity-60"><option value="">Pa korrier</option>{drivers.filter((driver) => driver.active).map((driver) => <option key={driver.id} value={driver.id}>{driver.full_name} · {driver.phone}</option>)}</select></FormField>
+          {shipment.cod_amount_all > 0 && <FormField label={`Pagesa në dorëzim · ${shipment.cod_amount_all} Lekë`}><select disabled value={codStatus} className="form-control disabled:opacity-60"><option value="pending">Në pritje</option><option value="collected">U mblodh</option><option value="settled">U mbyll në arkë</option></select><p className="mt-2 text-xs text-slate-500">Arkëtimi regjistrohet me konfirmimin e dorëzimit. Mbyllja në arkë kryhet te Raportet.</p></FormField>}
           <FormField label="Vendndodhja"><input value={location} onChange={(event) => setLocation(event.target.value)} className="form-control" required /></FormField>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -568,10 +571,10 @@ function ShipmentDialog({ shipment, drivers, staff, onClose, onUpdated, onProof 
           </div>
           <FormField label="Shënimi që sheh klienti"><textarea value={details} onChange={(event) => setDetails(event.target.value)} className="form-control min-h-24 resize-y" required /></FormField>
           {error && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
-          <button disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 font-black text-white hover:bg-orange-600 disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <><CheckCircle2 className="size-5" /> Ruaj dhe njofto gjurmimin</>}</button>
+          <button disabled={saving || closed} className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 font-black text-white hover:bg-orange-600 disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <><CheckCircle2 className="size-5" /> {closed ? 'Dërgesa është mbyllur' : 'Ruaj dhe njofto gjurmimin'}</>}</button>
           <div className="grid gap-2 sm:grid-cols-2">
             <Link href={`/staff/labels/${shipment.id}`} target="_blank" className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-5 py-3.5 font-black text-[#071b33]"><Printer className="size-5" /> Printo etiketën</Link>
-            <button type="button" onClick={onProof} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 font-black text-white"><PenLine className="size-5" /> {shipment.delivery_proofs ? 'Shiko provën' : 'Konfirmo dorëzimin'}</button>
+            <button type="button" onClick={onProof} disabled={!shipment.delivery_proofs && (closed || staff.role === 'support')} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 font-black text-white disabled:opacity-60"><PenLine className="size-5" /> {shipment.delivery_proofs ? 'Shiko provën' : 'Konfirmo dorëzimin'}</button>
           </div>
           <a href={`https://wa.me/${whatsappPhone}?text=${whatsappText}`} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#20b85a] px-5 py-3.5 font-black text-white"><MessageCircle className="size-5" /> Njofto marrësin në WhatsApp</a>
         </form>

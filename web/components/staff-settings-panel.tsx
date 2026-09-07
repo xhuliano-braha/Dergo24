@@ -155,13 +155,14 @@ function CreateStaffCard({ onCreated }: { onCreated: () => Promise<void> }) {
 }
 
 function ChangePasswordCard({ onChanged }: { onChanged: () => void }) {
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setMessage('');
     try {
-      await apiRequest('/api/staff/password', { method: 'POST', body: JSON.stringify({ newPassword: password }) });
+      await apiRequest('/api/staff/password', { method: 'POST', body: JSON.stringify({ newPassword: password, currentPassword }) });
       setMessage('U ndryshua. Hyni përsëri.');
       window.setTimeout(onChanged, 900);
     } catch (changeError) { setMessage(changeError instanceof Error ? changeError.message : 'Veprimi dështoi.'); }
@@ -170,7 +171,8 @@ function ChangePasswordCard({ onChanged }: { onChanged: () => void }) {
   return (
     <form onSubmit={submit} className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
       <KeyRound className="mb-4 size-6 text-orange-500" /><h2 className="font-black">Fjalëkalimi im</h2><p className="mt-1 text-xs text-slate-500">Pas ndryshimit duhet të hyni përsëri.</p>
-      <label htmlFor="staff-own-password" className="sr-only">Fjalëkalimi i ri</label><input id="staff-own-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="form-control mt-4" placeholder="Minimumi 8 karaktere" minLength={8} required />
+      <label htmlFor="staff-current-password" className="sr-only">Fjalëkalimi aktual</label><input id="staff-current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} className="form-control mt-4" placeholder="Fjalëkalimi aktual" maxLength={128} required />
+      <label htmlFor="staff-own-password" className="sr-only">Fjalëkalimi i ri</label><input id="staff-own-password" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} className="form-control mt-4" placeholder="Minimumi 8 karaktere" minLength={8} maxLength={128} required />
       {message && <p className="mt-3 text-xs font-semibold text-slate-500">{message}</p>}
       <button disabled={saving} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#071b33] px-4 py-3 text-sm font-black text-white disabled:opacity-60">{saving ? <RefreshCw className="size-4 animate-spin" /> : <><ShieldCheck className="size-4" /> Ndrysho</>}</button>
     </form>

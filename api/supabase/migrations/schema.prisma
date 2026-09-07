@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model StaffProfile {
+  id                     String          @id @db.Uuid
+  fullName               String          @map("full_name")
+  email                  String          @unique
+  role                   String
+  active                 Boolean         @default(true)
+  createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  driver                 Driver?         @relation("StaffDriver")
+  createdTrackingEvents  TrackingEvent[] @relation("TrackingEventCreator")
+  assignedQuoteRequests  QuoteRequest[]  @relation("QuoteRequestAssignee")
+  recordedDeliveryProofs DeliveryProof[] @relation("DeliveryProofRecorder")
+
+  @@map("staff_profiles")
+}
+
+model CustomerProfile {
+  id                String           @id @db.Uuid
+  fullName          String           @map("full_name")
+  email             String           @unique
+  phone             String
+  active            Boolean          @default(true)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  termsAcceptedAt   DateTime?        @map("terms_accepted_at") @db.Timestamptz(6)
+  privacyAcceptedAt DateTime?        @map("privacy_accepted_at") @db.Timestamptz(6)
+  shipments         Shipment[]
+  claims            Claim[]
+  deliveryRatings   DeliveryRating[]
+
+  @@map("customer_profiles")
+}
+
+model Driver {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName        String           @map("full_name")
+  phone           String           @unique
+  status          String           @default("available")
+  active          Boolean          @default(true)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  staffId         String?          @unique @map("staff_id") @db.Uuid
+  staff           StaffProfile?    @relation("StaffDriver", fields: [staffId], references: [id], onDelete: SetNull)
+  vehicles        Vehicle[]
+  shipments       Shipment[]
+  deliveryRatings DeliveryRating[]
+
+  @@map("drivers")
+}
+
+model Vehicle {
+  id                 String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  registrationNumber String     @unique @map("registration_number")
+  vehicleType        String     @map("vehicle_type")
+  capacityKg         Decimal?   @map("capacity_kg") @db.Decimal(10, 2)
+  driverId           String?    @map("driver_id") @db.Uuid
+  active             Boolean    @default(true)
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  driver             Driver?    @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  shipments          Shipment[]
+
+  @@map("vehicles")
+}
+
+model Shipment {
+  id               String           @id @db.Uuid
+  trackingCode     String           @unique @map("tracking_code")
+  senderName       String           @map("sender_name")
+  senderPhone      String           @map("sender_phone")
+  recipientName    String           @map("recipient_name")
+  recipientPhone   String           @map("recipient_phone")
+  pickupCity       String           @map("pickup_city")
+  deliveryCity     String           @map("delivery_city")
+  deliveryAddress  String           @map("delivery_address")
+  packageType      String           @map("package_type")
+  weightKg         Decimal          @map("weight_kg") @db.Decimal(10, 2)
+  service          String
+  status           String
+  quotedPriceAll   Int              @map("quoted_price_all")
+  driverId         String?          @map("driver_id") @db.Uuid
+  vehicleId        String?          @map("vehicle_id") @db.Uuid
+  notes            String?
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
+  customerId       String?          @map("customer_id") @db.Uuid
+  codAmountAll     Int              @default(0) @map("cod_amount_all")
+  codStatus        String           @default("not_required") @map("cod_status")
+  pickupDate       DateTime?        @map("pickup_date") @db.Date
+  deliveryWindow   String           @default("anytime") @map("delivery_window")
+  deliveryMethod   String           @default("home") @map("delivery_method")
+  pickupPointId    String?          @map("pickup_point_id") @db.Uuid
+  addressValidated Boolean          @default(false) @map("address_validated")
+  routeOrder       Int?             @map("route_order")
+  driver           Driver?          @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  vehicle          Vehicle?         @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  customer         CustomerProfile? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  pickupPoint      PickupPoint?     @relation(fields: [pickupPointId], references: [id], onDelete: SetNull)
+  trackingEvents   TrackingEvent[]
+  deliveryProof    DeliveryProof?
+  claims           Claim[]
+  deliveryRating   DeliveryRating?
+
+  @@index([status, createdAt(sort: Desc)], map: "idx_shipments_status_created_at")
+  @@index([pickupDate, driverId, routeOrder], map: "idx_shipments_pickup_date")
+  @@map("shipments")
+}
+
+model TrackingEvent {
+  id         String        @id @db.Uuid
+  shipmentId String        @map("shipment_id") @db.Uuid
+  status     String
+  location   String
+  details    String
+  createdBy  String?       @map("created_by") @db.Uuid
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  latitude   Float?        @db.DoublePrecision
+  longitude  Float?        @db.DoublePrecision
+  shipment   Shipment      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  creator    StaffProfile? @relation("TrackingEventCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([shipmentId, createdAt(sort: Desc)], map: "idx_tracking_events_shipment_created")
+  @@map("tracking_events")
+}
+
+model QuoteRequest {
+  id             String        @id @db.Uuid
+  referenceCode  String        @unique @map("reference_code")
+  customerName   String        @map("customer_name")
+  phone          String
+  pickupCity     String        @map("pickup_city")
+  deliveryCity   String        @map("delivery_city")
+  itemType       String        @map("item_type")
+  description    String
+  status         String        @default("new")
+  assignedTo     String?       @map("assigned_to") @db.Uuid
+  quotedPriceAll Int?          @map("quoted_price_all")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+  assignee       StaffProfile? @relation("QuoteRequestAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)], map: "idx_quote_requests_status_created")
+  @@map("quote_requests")
+}
+
+model DeliveryProof {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shipmentId      String        @unique @map("shipment_id") @db.Uuid
+  recipientName   String        @map("recipient_name")
+  signatureData   String        @map("signature_data")
+  photoPath       String?       @map("photo_path")
+  notes           String?
+  codCollectedAll Int           @default(0) @map("cod_collected_all")
+  latitude        Float?        @db.DoublePrecision
+  longitude       Float?        @db.DoublePrecision
+  recordedBy      String?       @map("recorded_by") @db.Uuid
+  deliveredAt     DateTime      @default(now()) @map("delivered_at") @db.Timestamptz(6)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  shipment        Shipment      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  recorder        StaffProfile? @relation("DeliveryProofRecorder", fields: [recordedBy], references: [id], onDelete: SetNull)
+
+  @@index([deliveredAt(sort: Desc)], map: "idx_delivery_proofs_delivered_at")
+  @@map("delivery_proofs")
+}
+
+model PickupPoint {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  city         String
+  address      String
+  openingHours String     @map("opening_hours")
+  latitude     Float?     @db.DoublePrecision
+  longitude    Float?     @db.DoublePrecision
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  shipments    Shipment[]
+
+  @@map("pickup_points")
+}
+
+model Claim {
+  id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shipmentId         String          @map("shipment_id") @db.Uuid
+  customerId         String          @map("customer_id") @db.Uuid
+  claimType          String          @map("claim_type")
+  description        String
+  requestedRefundAll Int             @default(0) @map("requested_refund_all")
+  approvedRefundAll  Int?            @map("approved_refund_all")
+  status             String          @default("new")
+  staffNotes         String?         @map("staff_notes")
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime        @default(now()) @map("updated_at") @db.Timestamptz(6)
+  shipment           Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  customer           CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt(sort: Desc)], map: "idx_claims_status_created")
+  @@map("claims")
+}
+
+model DeliveryRating {
+  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shipmentId String          @unique @map("shipment_id") @db.Uuid
+  customerId String          @map("customer_id") @db.Uuid
+  driverId   String          @map("driver_id") @db.Uuid
+  rating     Int
+  comment    String?
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  shipment   Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  driver     Driver          @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@index([driverId, createdAt(sort: Desc)], map: "idx_delivery_ratings_driver")
+  @@map("delivery_ratings")
+}

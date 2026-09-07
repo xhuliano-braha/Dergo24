@@ -10,6 +10,8 @@
     "build": "cd web && vinext build",
     "start": "wrangler dev --config web/dist/server/wrangler.json",
     "lint": "oxlint web api",
+    "lint:api": "oxlint api/src web/app/api",
+    "typecheck:api": "tsc -p api/tsconfig.json",
     "format": "oxfmt web api"
   },
   "dependencies": {
