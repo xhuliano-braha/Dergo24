@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "cd web && vinext dev",
     "build": "cd web && vinext build",
+    "deploy": "cd web && vinext-cloudflare deploy",
     "start": "wrangler dev --config web/dist/server/wrangler.json",
     "lint": "oxlint web api",
     "lint:api": "oxlint api/src web/app/api",
@@ -19,6 +20,7 @@
     "@base-ui/react": "1.7.0",
     "@shadcn/react": "0.3.0",
     "@supabase/supabase-js": "^2.114.0",
+    "@vinext/cloudflare": "^1.0.0-beta.7",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",

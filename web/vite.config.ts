@@ -1,5 +1,6 @@
 import { sites } from '@openai/sites-vite-plugin';
 import tailwindcss from '@tailwindcss/postcss';
+import { cdnAdapter } from '@vinext/cloudflare/cache/cdn-adapter';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
 import hostingConfig from './.openai/hosting.json' with { type: 'json' };
@@ -15,6 +16,8 @@ const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
 const localBindingConfig = {
   main: 'vinext/server/fetch-handler',
   compatibility_flags: ['nodejs_compat'],
+  cache: { enabled: true },
+  version_metadata: { binding: 'CF_VERSION_METADATA' },
   d1_databases: d1
     ? [
         {
@@ -50,7 +53,7 @@ export default defineConfig(async () => {
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
     plugins: [
-      vinext(),
+      vinext({ cache: { cdn: cdnAdapter() } }),
       sites(),
       cloudflare({
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
