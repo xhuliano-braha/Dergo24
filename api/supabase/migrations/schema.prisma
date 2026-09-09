@@ -11,15 +11,58 @@ model StaffProfile {
   id                     String          @id @db.Uuid
   fullName               String          @map("full_name")
   email                  String          @unique
-  role                   String
+  roleId                 Int             @map("role_id")
   active                 Boolean         @default(true)
   createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   driver                 Driver?         @relation("StaffDriver")
   createdTrackingEvents  TrackingEvent[] @relation("TrackingEventCreator")
   assignedQuoteRequests  QuoteRequest[]  @relation("QuoteRequestAssignee")
   recordedDeliveryProofs DeliveryProof[] @relation("DeliveryProofRecorder")
+  role                   Role            @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  auditLogs              StaffAuditLog[]
 
   @@map("staff_profiles")
+}
+
+model StaffAuditLog {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId    String?       @map("actor_id") @db.Uuid
+  action     String
+  targetType String        @map("target_type")
+  targetId   String        @map("target_id")
+  changes    Json
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  actor      StaffProfile? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)], map: "staff_audit_logs_created_at_idx")
+  @@map("staff_audit_logs")
+}
+
+model Role {
+  id              Int              @id @default(autoincrement())
+  name            String           @unique
+  staffProfiles   StaffProfile[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id              Int              @id @default(autoincrement())
+  code            String           @unique
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int        @map("role_id")
+  permissionId Int        @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
 }
 
 model CustomerProfile {

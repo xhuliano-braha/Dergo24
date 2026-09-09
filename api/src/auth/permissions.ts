@@ -1,10 +1,14 @@
 import { ApiError } from '../errors/api-error';
-import type { StaffProfile } from '../types/profiles';
+import type { PermissionCode, StaffProfile } from '../types/profiles';
 
-export function requireRole(
+export function hasPermission(staff: StaffProfile, permission: PermissionCode) {
+  return staff.permissions.includes(permission);
+}
+
+export function requirePermission(
   staff: StaffProfile,
-  roles: readonly StaffProfile['role'][],
+  permission: PermissionCode,
 ) {
-  if (!roles.includes(staff.role))
+  if (!hasPermission(staff, permission))
     throw new ApiError('Nuk keni leje për këtë veprim.', 403);
 }

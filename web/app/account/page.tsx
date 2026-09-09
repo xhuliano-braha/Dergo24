@@ -174,17 +174,39 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
   const [error, setError] = useState(initialError);
   const [saving, setSaving] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationOpen, setVerificationOpen] = useState(false);
+  const [notice, setNotice] = useState('');
 
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault(); setSaving(true); setError('');
+    event.preventDefault(); setSaving(true); setError(''); setNotice('');
     try {
       await apiRequest(mode === 'login' ? '/api/account/auth' : '/api/account/register', {
         method: 'POST',
         body: JSON.stringify({ ...form, acceptedTerms: mode === 'register' ? acceptedTerms : undefined }),
       });
-      await onSuccess();
+      if (mode === 'register') {
+        setVerificationOpen(true);
+        setMode('login');
+        setNotice('Kontrolloni email-in. Hapni lidhjen e konfirmimit ose vendosni kodin më poshtë, pastaj hyni.');
+      } else {
+        await onSuccess();
+      }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Veprimi dështoi.');
+    } finally { setSaving(false); }
+  }
+
+  async function verifyEmail(resend: boolean) {
+    setSaving(true); setError(''); setNotice('');
+    try {
+      await apiRequest(resend ? '/api/account/resend' : '/api/account/verify', {
+        method: 'POST', body: JSON.stringify({ email: form.email, token: verificationCode }),
+      });
+      setNotice(resend ? 'Nëse llogaria pret verifikim, kontrolloni email-in.' : 'Email-i u verifikua. Tani hyni me fjalëkalimin tuaj.');
+      if (!resend) { setVerificationOpen(false); setVerificationCode(''); setMode('login'); }
+    } catch (verifyError) {
+      setError(verifyError instanceof Error ? verifyError.message : 'Verifikimi dështoi.');
     } finally { setSaving(false); }
   }
 
@@ -206,6 +228,9 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
           <Field id="customer-password" label="Fjalëkalimi"><input id="customer-password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="form-control" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required /></Field>
           {mode === 'register' && <label className="mt-5 flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 size-4 accent-orange-500" required /><span>Pranoj <Link href="/terms" target="_blank" className="font-black text-orange-600 underline">kushtet</Link> dhe <Link href="/privacy" target="_blank" className="font-black text-orange-600 underline">privatësinë</Link>.</span></label>}
           {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+          {notice && <output className="mt-4 block rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">{notice}</output>}
+          <button type="button" onClick={() => setVerificationOpen(!verificationOpen)} className="mt-4 text-sm font-bold text-orange-700">Verifiko email-in / Ridërgo konfirmimin</button>
+          {verificationOpen && <div className="mt-3 rounded-xl bg-slate-50 p-4"><label htmlFor="email-verification-code" className="text-sm font-bold">Kodi nga email-i (nëse shfaqet)</label><input id="email-verification-code" value={verificationCode} onChange={(event) => setVerificationCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={10} className="form-control mt-2" /><div className="mt-3 flex gap-4"><button type="button" disabled={saving || !form.email || !/^\d{6,10}$/.test(verificationCode)} onClick={() => void verifyEmail(false)} className="font-bold text-orange-700 disabled:opacity-50">Verifiko</button><button type="button" disabled={saving || !form.email} onClick={() => void verifyEmail(true)} className="font-bold text-slate-600 disabled:opacity-50">Ridërgo email-in</button></div></div>}
           <button disabled={saving || (mode === 'register' && !acceptedTerms)} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 font-black text-white disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <>{mode === 'login' ? 'Hyr në llogari' : 'Krijo llogari'} <ArrowRight className="size-5" /></>}</button>
           <Link href="/" className="mt-6 block text-center text-sm font-bold text-slate-500">Kthehu te faqja kryesore</Link>
         </form>

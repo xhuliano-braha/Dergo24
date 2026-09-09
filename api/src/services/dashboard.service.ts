@@ -1,6 +1,7 @@
 import { ApiError } from '../errors/api-error';
 import { dashboardRepository } from '../repositories/dashboard.repository';
 import type { StaffProfile, CustomerProfile } from '../types/profiles';
+import { hasPermission } from '../auth/permissions';
 export const dashboardService = {
   async staff(staff: StaffProfile) {
     const {
@@ -25,17 +26,38 @@ export const dashboardService = {
 
     return {
       staff,
-      shipments: shipmentsResult.data ?? [],
-      quotes: staff.role === 'courier' ? [] : (quotesResult.data ?? []),
-      drivers:
-        staff.role === 'courier'
+      shipments: hasPermission(staff, 'shipments.view')
+        ? (shipmentsResult.data ?? [])
+        : [],
+      quotes: hasPermission(staff, 'quotes.view')
+        ? (quotesResult.data ?? [])
+        : [],
+      drivers: !hasPermission(staff, 'drivers.view')
+        ? []
+        : staff.role === 'courier'
           ? (driversResult.data ?? []).filter(
               (driver) => driver.staff_id === staff.id,
             )
           : (driversResult.data ?? []),
-      staffAccounts: staff.role === 'courier' ? [] : (staffResult.data ?? []),
-      claims: staff.role === 'courier' ? [] : (claimsResult.data ?? []),
-      ratings: staff.role === 'courier' ? [] : (ratingsResult.data ?? []),
+      staffAccounts: !hasPermission(staff, 'staff.view')
+        ? []
+        : (staffResult.data ?? []).map(({ roles, ...account }) => {
+            const relation = roles as unknown;
+            const role = Array.isArray(relation) ? relation[0] : relation;
+            return {
+              ...account,
+              role:
+                role && typeof role === 'object' && 'name' in role
+                  ? role.name
+                  : null,
+            };
+          }),
+      claims: hasPermission(staff, 'claims.view')
+        ? (claimsResult.data ?? [])
+        : [],
+      ratings: hasPermission(staff, 'ratings.view')
+        ? (ratingsResult.data ?? [])
+        : [],
       pickupPoints: pointsResult.data ?? [],
     };
   },

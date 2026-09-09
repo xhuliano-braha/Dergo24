@@ -47,7 +47,7 @@ export const dashboardRepository = {
         .order('full_name'),
       supabase
         .from('staff_profiles')
-        .select('id, full_name, email, role, active, created_at')
+        .select('id, full_name, email, roles!inner(name), active, created_at')
         .order('full_name'),
       supabase
         .from('claims')

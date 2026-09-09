@@ -4,12 +4,13 @@ import { getAuthenticatedStaff, unauthorizedResponse } from '../lib/staff-auth';
 import { accountService } from '../services/account.service';
 import { controllerErrorResponse } from './controller-response';
 import { parseJson } from './request-input';
+import { hasPermission } from '../auth/permissions';
 
 export async function POST(request: NextRequest) {
   try {
     const staff = await getAuthenticatedStaff(request);
     if (!staff) return unauthorizedResponse();
-    if (staff.role !== 'admin')
+    if (!hasPermission(staff, 'staff.manage'))
       return NextResponse.json(
         { error: 'Vetëm administratori mund të krijojë staf.' },
         { status: 403 },

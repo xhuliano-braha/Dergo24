@@ -12,6 +12,7 @@
     "lint": "oxlint web api",
     "lint:api": "oxlint api/src web/app/api",
     "typecheck:api": "tsc -p api/tsconfig.json",
+    "test:rbac": "node --test api/tests/rbac.test.mjs",
     "format": "oxfmt web api"
   },
   "dependencies": {
@@ -24,8 +25,10 @@
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.2",
     "input-otp": "1.4.2",
+    "jpeg-js": "^0.4.4",
     "jsbarcode": "^3.12.3",
     "lucide-react": "1.31.0",
+    "pngjs": "^7.0.0",
     "react": "^19.2.8",
     "react-day-picker": "9.8.1",
     "react-dom": "^19.2.8",
@@ -45,6 +48,7 @@
     "@tailwindcss/postcss": "4.2.1",
     "@types/jsbarcode": "^3.11.4",
     "@types/node": "22.19.19",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",

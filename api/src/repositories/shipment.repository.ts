@@ -14,7 +14,7 @@ export const shipmentRepository = {
   findTrackingEvents(shipmentId: string) {
     return getSupabaseAdmin()
       .from('tracking_events')
-      .select('status, location, details, latitude, longitude, created_at')
+      .select('status, created_at')
       .eq('shipment_id', shipmentId)
       .order('created_at', { ascending: false });
   },

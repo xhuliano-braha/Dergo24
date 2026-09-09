@@ -1,9 +1,14 @@
 import { z } from 'zod';
-import { validSignature } from '../security/image-validation';
+import { normalizeSignature } from '../security/image-validation';
 
 export const deliveryProofSchema = z.object({
   recipientName: z.string().trim().min(2).max(80),
-  signatureData: z.string().max(500000).refine(validSignature),
+  signatureData: z.string().max(500000).transform((value, context) => {
+    try { return normalizeSignature(value); } catch {
+      context.addIssue({ code: 'custom', message: 'Firma është e pavlefshme ose bosh.' });
+      return z.NEVER;
+    }
+  }),
   notes: z.string().trim().max(1000),
   latitude: z.number().min(-90).max(90).nullable(),
   longitude: z.number().min(-180).max(180).nullable(),

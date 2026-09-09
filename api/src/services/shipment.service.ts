@@ -95,10 +95,10 @@ export const shipmentService = {
       },
       events: (events ?? []).map((event) => ({
         status: event.status,
-        location: event.location,
-        details: event.details,
-        latitude: event.latitude,
-        longitude: event.longitude,
+        location: 'Shqipëri',
+        details: 'Statusi i dërgesës u përditësua.',
+        latitude: null,
+        longitude: null,
         createdAt: event.created_at,
       })),
     };
@@ -136,7 +136,7 @@ export const shipmentService = {
   },
 
   async importMany(inputs: ShipmentInput[], staff: StaffProfile) {
-    if (!['admin', 'dispatcher'].includes(staff.role))
+    if (!staff.permissions.includes('shipments.import'))
       throw new ApiError('Nuk keni leje për import.', 403);
 
     const createdAt = new Date().toISOString();
@@ -181,6 +181,8 @@ export const shipmentService = {
     input: ShipmentUpdateInput,
     staff: StaffProfile,
   ) {
+    if (!staff.permissions.includes('shipments.update'))
+      throw new ApiError('Nuk keni leje për të ndryshuar dërgesën.', 403);
     const { data: currentShipment, error: currentShipmentError } =
       await shipmentRepository.findForUpdate(shipmentId);
     if (currentShipmentError)

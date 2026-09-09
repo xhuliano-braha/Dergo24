@@ -31,6 +31,6 @@ export function calculatePrice(weight: number, service: ShipmentInput['service']
 
 export function createTrackingCode() {
   const year = new Date().getFullYear().toString().slice(-2);
-  const random = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+  const random = Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('').toUpperCase();
   return `D24-${year}-${random}`;
 }

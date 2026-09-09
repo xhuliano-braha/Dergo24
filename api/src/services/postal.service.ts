@@ -1,5 +1,5 @@
 import type { output } from 'zod';
-import { requireRole } from '../auth/permissions';
+import { requirePermission } from '../auth/permissions';
 import { ApiError } from '../errors/api-error';
 import type {
   driverCreateSchema,
@@ -22,7 +22,7 @@ export const postalService = {
     input: output<typeof driverCreateSchema>,
     staff: StaffProfile,
   ) {
-    requireRole(staff, ['admin', 'dispatcher']);
+    requirePermission(staff, 'drivers.manage');
     const { error } = await postalRepository.createDriver({
       full_name: input.fullName,
       phone: input.phone,
@@ -39,12 +39,19 @@ export const postalService = {
     input: output<typeof driverUpdateSchema>,
     staff: StaffProfile,
   ) {
-    requireRole(staff, ['admin', 'dispatcher']);
+    requirePermission(staff, 'drivers.manage');
     if (input.staffId) {
       const { data: linkedStaff, error } =
         await accountRepository.findActiveStaff(input.staffId);
       if (error) throw new ApiError('Llogaria nuk mund të ngarkohej.', 503);
-      if (!linkedStaff || linkedStaff.role !== 'courier')
+      const relation = linkedStaff?.roles as unknown;
+      const linkedRole = Array.isArray(relation) ? relation[0] : relation;
+      if (
+        !linkedRole ||
+        typeof linkedRole !== 'object' ||
+        !('name' in linkedRole) ||
+        linkedRole.name !== 'courier'
+      )
         throw new ApiError('Zgjidhni një llogari aktive korrieri.', 400);
     }
     const { data, error } = await postalRepository.updateDriver(id, {
@@ -78,7 +85,7 @@ export const postalService = {
     input: output<typeof quoteUpdateSchema>,
     staff: StaffProfile,
   ) {
-    requireRole(staff, ['admin', 'dispatcher', 'support']);
+    requirePermission(staff, 'quotes.manage');
     const { data, error } = await postalRepository.updateQuote(id, {
       status: input.status,
       quoted_price_all: input.quotedPrice,
@@ -115,7 +122,7 @@ export const postalService = {
     input: output<typeof claimUpdateSchema>,
     staff: StaffProfile,
   ) {
-    requireRole(staff, ['admin', 'dispatcher', 'support']);
+    requirePermission(staff, 'claims.manage');
     const { data, error } = await postalRepository.updateClaim(id, {
       status: input.status,
       approved_refund_all: input.approvedRefund,
@@ -160,7 +167,7 @@ export const postalService = {
     input: output<typeof pickupPointSchema>,
     staff: StaffProfile,
   ) {
-    requireRole(staff, ['admin']);
+    requirePermission(staff, 'pickup_points.manage');
     const { error } = await postalRepository.createPickupPoint({
       name: input.name,
       city: input.city,

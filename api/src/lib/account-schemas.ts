@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { permissionCodes } from '../types/profiles';
 
 export const customerLoginSchema = z.object({
   email: z.email().trim().max(160),
@@ -7,7 +8,10 @@ export const customerLoginSchema = z.object({
 
 export const customerRegisterSchema = customerLoginSchema.extend({
   fullName: z.string().trim().min(2).max(80),
-  phone: z.string().trim().regex(/^\+?[0-9 ]{8,16}$/),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+?[0-9 ]{8,16}$/),
   acceptedTerms: z.literal(true),
 });
 
@@ -27,4 +31,8 @@ export const staffAccountUpdateSchema = z.object({
   role: z.enum(['admin', 'dispatcher', 'support', 'courier']),
   active: z.boolean(),
   newPassword: z.string().min(8).max(128).optional(),
+});
+
+export const rolePermissionsUpdateSchema = z.object({
+  permissions: z.array(z.enum(permissionCodes)).max(permissionCodes.length),
 });

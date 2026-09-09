@@ -1,5 +1,5 @@
 import type { output } from 'zod';
-import { requireRole } from '../auth/permissions';
+import { requirePermission } from '../auth/permissions';
 import { ApiError } from '../errors/api-error';
 import { deliveryRepository } from '../repositories/delivery.repository';
 import { atomicWriteError } from '../errors/atomic-write-error';
@@ -9,6 +9,7 @@ import type { StaffProfile } from '../types/profiles';
 import { validatePhoto } from '../security/image-validation';
 
 async function accessibleShipment(id: string, staff: StaffProfile) {
+  requirePermission(staff, 'shipments.view');
   const { data: shipment, error } = await deliveryRepository.findShipment(id);
   if (error) throw new ApiError('Dërgesa nuk mund të ngarkohej.', 503);
   if (!shipment) throw new ApiError('Dërgesa nuk u gjet.', 404);
@@ -34,7 +35,7 @@ export const deliveryService = {
     return { shipment: data };
   },
   async settle(id: string, staff: StaffProfile) {
-    requireRole(staff, ['admin', 'dispatcher']);
+    requirePermission(staff, 'cod.settle');
     const { data, error } = await deliveryRepository.settle(id);
     if (error) throw new ApiError('Arkëtimi nuk mund të mbyllej.', 503);
     if (!data)
@@ -57,7 +58,7 @@ export const deliveryService = {
     return { proof: { ...proof, photoUrl } };
   },
   async saveProof(id: string, input: DeliveryProofInput, staff: StaffProfile) {
-    requireRole(staff, ['admin', 'dispatcher', 'courier']);
+    requirePermission(staff, 'shipments.deliver');
     const shipment = await accessibleShipment(id, staff);
     if (
       shipment.status === 'U dorëzua' ||
@@ -72,22 +73,8 @@ export const deliveryService = {
       );
     let photoPath: string | null = null;
     if (input.photo) {
-      const photo = input.photo;
-      await validatePhoto(photo);
-      if (
-        photo.size > 5 * 1024 * 1024 ||
-        !['image/jpeg', 'image/png', 'image/webp'].includes(photo.type)
-      )
-        throw new ApiError(
-          'Fotoja duhet të jetë JPG, PNG ose WEBP deri në 5 MB.',
-          400,
-        );
-      const extension =
-        photo.type === 'image/png'
-          ? 'png'
-          : photo.type === 'image/webp'
-            ? 'webp'
-            : 'jpg';
+      const photo = await validatePhoto(input.photo);
+      const extension = photo.type === 'image/png' ? 'png' : 'jpg';
       photoPath = `${id}/${crypto.randomUUID()}.${extension}`;
       const { error } = await deliveryRepository.uploadPhoto(photoPath, photo);
       if (error) throw new ApiError('Fotoja e dorëzimit nuk u ngarkua.', 503);
@@ -106,7 +93,7 @@ export const deliveryService = {
     return { success: true };
   },
   async optimize(input: output<typeof routePlanSchema>, staff: StaffProfile) {
-    requireRole(staff, ['admin', 'dispatcher']);
+    requirePermission(staff, 'routes.optimize');
     const { data, error } = await deliveryRepository.routeStops(
       input.driverId,
       input.pickupDate,
