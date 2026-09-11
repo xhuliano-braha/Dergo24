@@ -3,7 +3,7 @@ import { assertSameOrigin } from '../api/src/security/request-security';
 import { requestClient, throttleAuth } from '../api/src/security/auth-throttle';
 import { controllerErrorResponse } from '../api/src/controllers/controller-response';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response: NextResponse;
   try {
     assertSameOrigin(request);
@@ -11,9 +11,17 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/api/')) {
       const client = await requestClient(request);
       await throttleAuth(`requests:${client}`, 300, 60);
-      if (request.method === 'POST' && /^\/api\/(staff\/(auth|password)|account\/(auth|register|resend|verify|password))$/.test(pathname))
+      if (
+        request.method === 'POST' &&
+        /^\/api\/(staff\/(auth|password)|account\/(auth|register|resend|verify|password))$/.test(
+          pathname,
+        )
+      )
         await throttleAuth(`auth:${client}`, 30, 60);
-      if (request.method === 'POST' && ['/api/shipments', '/api/quote-requests'].includes(pathname))
+      if (
+        request.method === 'POST' &&
+        ['/api/shipments', '/api/quote-requests'].includes(pathname)
+      )
         await throttleAuth(`booking:${client}`, 10, 3600);
       if (request.method === 'GET' && pathname === '/api/shipments')
         await throttleAuth(`tracking:${client}`, 60, 60);
@@ -27,7 +35,10 @@ export async function middleware(request: NextRequest) {
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('Referrer-Policy', 'no-referrer');
-  response.headers.set('Content-Security-Policy', "frame-ancestors 'none'; object-src 'none'; base-uri 'self'");
+  response.headers.set(
+    'Content-Security-Policy',
+    "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+  );
   return response;
 }
 

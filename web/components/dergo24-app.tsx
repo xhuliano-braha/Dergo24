@@ -14,7 +14,6 @@ import {
   Route,
   Search,
   ShieldCheck,
-  Sparkles,
   Truck,
   UserRound,
   X,
@@ -320,9 +319,9 @@ export function Dergo24App() {
   }
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fafbfc]">
-      <header className={`fixed inset-x-0 top-0 z-40 border-b transition-all duration-500 ${scrolled ? 'border-slate-200/80 bg-white/90 shadow-[0_10px_45px_rgba(7,27,51,.08)] backdrop-blur-2xl' : 'border-transparent bg-white/95 backdrop-blur-xl'}`}>
-        <div className={`mx-auto flex max-w-7xl items-center justify-between px-5 transition-all duration-500 lg:px-8 ${scrolled ? 'h-16' : 'h-20'}`}>
+    <main className="brand-canvas min-h-screen overflow-hidden">
+      <header className="premium-header fixed inset-x-0 top-0 z-40 transition-all duration-500">
+        <div className={`premium-nav-shell mx-auto flex max-w-7xl items-center justify-between px-5 transition-all duration-500 lg:px-7 ${scrolled ? 'h-15' : 'h-17'}`}>
           <a
             href="#top"
             className="flex items-center gap-2.5"
@@ -351,7 +350,7 @@ export function Dergo24App() {
               Gjurmo pakon
             </Button>
             <Button
-              className="shine-button h-11 rounded-xl px-5 shadow-[0_8px_24px_rgba(244,90,10,.22)] hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(244,90,10,.3)]"
+              className="premium-button shine-button h-11 rounded-xl px-5 hover:-translate-y-0.5"
               onClick={() => setBookingOpen(true)}
             >
               Dërgo tani <ArrowRight />
@@ -391,18 +390,18 @@ export function Dergo24App() {
         )}
       </header>
 
-      <section id="top" className="relative bg-[#071b38] pt-20 text-white">
+      <section id="top" className="premium-hero relative pt-20 text-white">
         <div className="premium-grid pointer-events-none absolute inset-0" />
         <div className="premium-glow pointer-events-none absolute -left-40 top-20 size-[520px]" />
         <div className="mx-auto grid min-h-[760px] max-w-[1500px] lg:grid-cols-[1.05fr_.95fr]">
           <div className="flex items-center px-5 py-20 lg:px-[max(2rem,calc((100vw-1280px)/2))] lg:pr-12">
             <div className="relative z-10 max-w-2xl" data-reveal="left">
-              <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-[.12em] text-primary">
-                <Sparkles className="size-3.5" /> Shpejt. Sigurt. Kudo.
+              <div className="brand-kicker mb-7 text-xs font-bold uppercase tracking-[.14em]">
+                Shpejt. Sigurt. Kudo.
               </div>
-              <h1 className="text-balance text-5xl font-black leading-[.98] tracking-[-.055em] sm:text-6xl lg:text-[5rem]">
+              <h1 className="brand-display text-balance text-5xl font-black leading-[.95] sm:text-6xl lg:text-[5.25rem]">
                 Nga dera juaj,{' '}
-                <span className="text-primary">në destinacion.</span>
+                <em>në destinacion.</em>
               </h1>
               <p className="mt-7 max-w-xl text-lg leading-8 text-white/65 sm:text-xl">
                 Pako, dokumente, mobilje dhe ngarkesa biznesi në gjithë
@@ -410,7 +409,7 @@ export function Dergo24App() {
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Button
-                  className="shine-button h-14 rounded-xl px-7 text-base font-bold shadow-[0_12px_34px_rgba(247,91,18,.28)] hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(247,91,18,.38)]"
+                  className="premium-button shine-button h-14 rounded-xl px-7 text-base font-bold hover:-translate-y-1"
                   onClick={() => setBookingOpen(true)}
                 >
                   Dërgo një pako <ArrowRight className="size-5" />
@@ -430,7 +429,7 @@ export function Dergo24App() {
               </div>
             </div>
           </div>
-          <div className="relative min-h-[560px] overflow-hidden lg:min-h-full" data-reveal="right">
+          <div className="premium-frame relative min-h-[560px] overflow-hidden lg:my-6 lg:mr-6 lg:min-h-[710px] lg:rounded-[2rem]" data-reveal="right">
             <Image
               src="/dergo24-doorstep.jpeg"
               alt="Korrieri Dërgo24 dorëzon një pako në adresën e klientit"
@@ -456,7 +455,7 @@ export function Dergo24App() {
         className="relative z-10 mx-auto -mt-16 max-w-6xl px-5 lg:px-8"
         data-reveal
       >
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#071b38]/95 p-5 text-white shadow-[0_30px_100px_rgba(7,27,56,.3)] backdrop-blur-2xl sm:p-8">
+        <div className="glass-dark-panel relative overflow-hidden rounded-[2rem] p-5 text-white backdrop-blur-2xl sm:p-8">
           <div className="premium-glow pointer-events-none absolute -right-28 -top-36 size-80 opacity-60" />
           <div className="grid gap-6 lg:grid-cols-[.8fr_1.4fr] lg:items-center">
             <div>
@@ -546,7 +545,7 @@ export function Dergo24App() {
             { icon: MapPin, value: '61 bashki', label: 'Mbulim në Shqipëri' },
             { icon: PackageCheck, value: 'Online', label: 'Gjurmim i çdo pakoje' },
           ].map((stat, index) => (
-            <div key={stat.label} data-reveal className={`premium-card stagger-${index + 1} flex items-center gap-4 rounded-2xl border border-slate-200/70 bg-white/80 p-5 backdrop-blur-xl`}>
+            <div key={stat.label} data-reveal className={`brand-panel brand-metric premium-card stagger-${index + 1} flex items-center gap-4 rounded-2xl p-5`}>
               <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-orange-50 text-primary"><stat.icon className="size-5" /></span>
               <div><p className="text-lg font-black tracking-tight text-[#071b33]">{stat.value}</p><p className="mt-0.5 text-xs font-semibold text-slate-500">{stat.label}</p></div>
             </div>
@@ -890,17 +889,37 @@ function BookingModal({
   }, []);
 
   async function validateAddress() {
-    const response = await fetch('/api/address/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ city: form.deliveryCity, address: form.address }),
-    });
-    const body = await response.json() as { valid: boolean; city?: string; address?: string; message: string };
-    setAddressValid(body.valid);
-    setAddressMessage(body.message);
-    if (body.valid) {
-      if (body.city) field('deliveryCity', body.city);
-      if (body.address) field('address', body.address);
+    if (!form.address.trim()) {
+      setAddressValid(false);
+      setAddressMessage('Shkruani adresën para se ta verifikoni.');
+      return;
+    }
+
+    setAddressValid(false);
+    setAddressMessage('Duke verifikuar adresën...');
+    try {
+      const response = await fetch('/api/address/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city: form.deliveryCity, address: form.address }),
+      });
+      const body = await response.json() as {
+        valid?: boolean;
+        city?: string;
+        address?: string;
+        message?: string;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(body.error || body.message || 'Adresa nuk mund të verifikohej.');
+
+      setAddressValid(Boolean(body.valid));
+      setAddressMessage(body.message || 'Adresa u verifikua.');
+      if (body.valid) {
+        if (body.city) field('deliveryCity', body.city);
+        if (body.address) field('address', body.address);
+      }
+    } catch (error) {
+      setAddressMessage(error instanceof Error ? error.message : 'Adresa nuk mund të verifikohej.');
     }
   }
 

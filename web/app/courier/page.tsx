@@ -163,8 +163,8 @@ export default function CourierPage() {
     );
 
   return (
-    <main className="min-h-screen bg-[#eef2f6] pb-28 text-[#10233d]">
-      <header className="sticky top-0 z-30 bg-[#071b33] px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))] text-white shadow-xl">
+    <main className="brand-canvas min-h-screen pb-28 text-[#10233d]">
+      <header className="brand-night-pattern sticky top-0 z-30 bg-[#071b33] px-4 pb-5 pt-[max(1rem,env(safe-area-inset-top))] text-white shadow-xl">
         <div className="mx-auto max-w-xl">
           <div className="flex items-center justify-between">
             <Image
@@ -714,10 +714,10 @@ function CourierLogin({
     }
   }
   return (
-    <main className="grid min-h-screen place-items-center bg-[#071b33] px-5 py-10">
+    <main className="brand-night brand-night-pattern grid min-h-screen place-items-center px-5 py-10">
       <form
         onSubmit={submit}
-        className="w-full max-w-sm rounded-[2rem] bg-white p-6 shadow-2xl"
+        className="premium-auth-card w-full max-w-sm"
       >
         <Image
           src="/dergo24-logo-light.svg"
@@ -761,7 +761,7 @@ function CourierLogin({
         )}
         <button
           disabled={saving}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 p-4 font-black text-white disabled:opacity-60"
+          className="premium-button mt-6 flex w-full items-center justify-center gap-2 rounded-2xl p-4 font-black text-white disabled:opacity-60"
         >
           {saving ? (
             <RefreshCw className="size-5 animate-spin" />

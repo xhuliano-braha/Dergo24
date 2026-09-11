@@ -1,10 +1,15 @@
 # Dergo24 API
 
-Ky folder përmban shtresën backend të Dergo24:
+This folder contains the Dergo24 backend:
 
-- `src/lib/` për autentikim, akses në PostgreSQL/Supabase, validim dhe rregulla biznesi.
-- `supabase/migrations/` për skemën dhe migrimet PostgreSQL.
-- `db/` dhe `drizzle/` për zgjerime të ardhshme të databazës.
-- `tsconfig.json` për kontroll të pavarur të kodit backend.
+- `src/controllers/` handles HTTP input and responses.
+- `src/services/` contains business rules and workflow orchestration.
+- `src/repositories/` is the only application layer that queries Supabase.
+- `src/security/` contains sessions, throttling, and upload protection.
+- `supabase/migrations/` contains the ordered PostgreSQL migration history.
+- [`supabase/DATABASE.md`](./supabase/DATABASE.md) explains the final database
+  model, relationships, conventions, and safe migration workflow.
+- `tsconfig.json` type-checks the backend independently.
 
-Endpoint-et publike mbeten adapterë të hollë në `web/app/api/`, sepse Vinext përdor routing bazuar në file. Adapterët importojnë backend-in me `@api/*`.
+Public endpoints remain thin adapters in `web/app/api/` because Vinext uses
+file-based routing. The adapters import backend modules through `@api/*`.

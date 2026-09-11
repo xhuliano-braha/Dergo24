@@ -14,6 +14,10 @@
     "lint:api": "oxlint api/src web/app/api",
     "typecheck:api": "tsc -p api/tsconfig.json",
     "test:rbac": "node --test api/tests/rbac.test.mjs",
+    "test:database": "node --test api/tests/database-schema.test.mjs",
+    "test:health": "node --test api/tests/health.test.mjs",
+    "backup:database": "node api/scripts/backup-supabase.mjs",
+    "test:browser:brave": "set PLAYWRIGHT_MCP_CONFIG=%CD%\\tests\\browser\\playwright-cli.brave.json&& playwright-cli --session dergo24-local open http://localhost:3000 && playwright-cli --session dergo24-local run-code --filename=tests/browser/local-smoke.js",
     "format": "oxfmt web api"
   },
   "dependencies": {
@@ -47,6 +51,7 @@
     "@cloudflare/vite-plugin": "^1.54.3",
     "@cloudflare/workers-types": "^5.20260831.1",
     "@openai/sites-vite-plugin": "0.2.0",
+    "@playwright/cli": "^0.1.19",
     "@tailwindcss/postcss": "4.2.1",
     "@types/jsbarcode": "^3.11.4",
     "@types/node": "22.19.19",

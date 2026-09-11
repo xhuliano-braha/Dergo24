@@ -1,0 +1,20 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "launchOptions": {
+      "executablePath": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
+      "headless": false
+    },
+    "contextOptions": {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    }
+  },
+  "outputDir": "output/playwright",
+  "outputMode": "file",
+  "console": {
+    "level": "error"
+  }
+}

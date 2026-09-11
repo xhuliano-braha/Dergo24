@@ -334,8 +334,8 @@ export default function StaffPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f3f6fa] text-[#10233d]">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <main className="brand-canvas min-h-screen text-[#10233d]">
+      <header className="premium-app-header sticky top-0 z-30">
         <div className="mx-auto flex h-18 max-w-[1500px] items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-3">
             <button
@@ -378,7 +378,7 @@ export default function StaffPage() {
 
       <div className="mx-auto flex max-w-[1500px]">
         <aside
-          className={`${menuOpen ? 'fixed inset-x-4 top-22 z-40 flex shadow-2xl' : 'hidden'} h-fit flex-col rounded-2xl bg-[#071b33] p-3 text-white lg:sticky lg:top-22 lg:mx-6 lg:mt-6 lg:flex lg:w-64 lg:shrink-0`}
+          className={`premium-side-nav ${menuOpen ? 'fixed inset-x-4 top-22 z-40 flex shadow-2xl' : 'hidden'} h-fit flex-col rounded-2xl p-3 text-white lg:sticky lg:top-22 lg:mx-6 lg:mt-6 lg:flex lg:w-64 lg:shrink-0`}
         >
           <div className="mb-2 flex items-center justify-between px-3 py-2 lg:hidden">
             <span className="font-bold">Navigimi</span>
@@ -546,8 +546,8 @@ function LoginScreen({
   }
 
   return (
-    <main className="grid min-h-screen bg-[#071b33] lg:grid-cols-2">
-      <section className="hidden min-h-screen flex-col justify-between overflow-hidden p-12 text-white lg:flex">
+    <main className="brand-night grid min-h-screen lg:grid-cols-2">
+      <section className="brand-night-pattern hidden min-h-screen flex-col justify-between overflow-hidden p-12 text-white lg:flex">
         <Link href="/" aria-label="Dërgo24, faqja kryesore">
           <Image
             src="/dergo24-logo-dark.svg"
@@ -575,8 +575,8 @@ function LoginScreen({
           Rruga Mikel Maruli, pranë Cassa Italia, Tiranë
         </p>
       </section>
-      <section className="grid min-h-screen place-items-center bg-white px-5 py-12 lg:rounded-l-[2.5rem]">
-        <form onSubmit={submit} className="w-full max-w-md">
+      <section className="premium-auth-surface grid min-h-screen place-items-center px-5 py-12 lg:rounded-l-[3rem]">
+        <form onSubmit={submit} className="premium-auth-card w-full max-w-md">
           <Link
             href="/"
             aria-label="Dërgo24, faqja kryesore"
@@ -633,7 +633,7 @@ function LoginScreen({
           )}
           <button
             disabled={submitting}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 font-black text-white hover:bg-orange-600 disabled:opacity-60"
+            className="premium-button mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-black text-white disabled:opacity-60"
           >
             {submitting ? (
               <RefreshCw className="size-5 animate-spin" />

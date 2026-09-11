@@ -126,8 +126,8 @@ export default function AccountPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f3f6fa] text-[#10233d]">
-      <header className="border-b border-slate-200 bg-white">
+    <main className="brand-canvas min-h-screen text-[#10233d]">
+      <header className="premium-app-header">
         <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-5">
           <Link href="/" aria-label="Dërgo24, faqja kryesore"><Image src="/dergo24-logo-light.svg" alt="Dërgo24" width={175} height={40} className="h-9 w-auto" /></Link>
           <div className="flex items-center gap-3">
@@ -211,14 +211,14 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
   }
 
   return (
-    <main className="grid min-h-screen bg-[#071b33] lg:grid-cols-[1.1fr_.9fr]">
-      <section className="hidden flex-col justify-between p-12 text-white lg:flex">
+    <main className="brand-night grid min-h-screen lg:grid-cols-[1.1fr_.9fr]">
+      <section className="brand-night-pattern hidden flex-col justify-between p-12 text-white lg:flex">
         <Link href="/" aria-label="Dërgo24, faqja kryesore"><Image src="/dergo24-logo-dark.svg" alt="Dërgo24" width={210} height={48} className="h-11 w-auto" /></Link>
         <div className="max-w-xl"><p className="text-sm font-black uppercase tracking-[0.2em] text-orange-400">Llogaria Dergo24</p><h1 className="mt-5 text-6xl font-black leading-[1.02] tracking-tight">Pakoja jote.<br />Gjithmonë pranë.</h1><p className="mt-6 text-lg leading-8 text-slate-300">Rezervo dërgesa, shiko historikun dhe ndiq çdo ndryshim statusi nga një vend.</p></div>
         <p className="text-sm text-slate-500">Transport në çdo qytet të Shqipërisë</p>
       </section>
-      <section className="grid min-h-screen place-items-center bg-white px-5 py-10 lg:rounded-l-[2.5rem]">
-        <form onSubmit={submit} className="w-full max-w-md">
+      <section className="premium-auth-surface grid min-h-screen place-items-center px-5 py-10 lg:rounded-l-[3rem]">
+        <form onSubmit={submit} className="premium-auth-card w-full max-w-md">
           <Link href="/" aria-label="Dërgo24, faqja kryesore" className="mb-10 block lg:hidden"><Image src="/dergo24-logo-light.svg" alt="Dërgo24" width={210} height={48} className="mx-auto h-11 w-auto" /></Link>
           <div className="mb-7 flex rounded-xl bg-slate-100 p-1"><button type="button" onClick={() => { setMode('login'); setError(''); }} className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-black ${mode === 'login' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Hyr</button><button type="button" onClick={() => { setMode('register'); setError(''); }} className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-black ${mode === 'register' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Krijo llogari</button></div>
           <h2 className="text-3xl font-black">{mode === 'login' ? 'Mirë se u ktheve' : 'Krijo llogarinë tënde'}</h2>
@@ -231,7 +231,7 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
           {notice && <output className="mt-4 block rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">{notice}</output>}
           <button type="button" onClick={() => setVerificationOpen(!verificationOpen)} className="mt-4 text-sm font-bold text-orange-700">Verifiko email-in / Ridërgo konfirmimin</button>
           {verificationOpen && <div className="mt-3 rounded-xl bg-slate-50 p-4"><label htmlFor="email-verification-code" className="text-sm font-bold">Kodi nga email-i (nëse shfaqet)</label><input id="email-verification-code" value={verificationCode} onChange={(event) => setVerificationCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={10} className="form-control mt-2" /><div className="mt-3 flex gap-4"><button type="button" disabled={saving || !form.email || !/^\d{6,10}$/.test(verificationCode)} onClick={() => void verifyEmail(false)} className="font-bold text-orange-700 disabled:opacity-50">Verifiko</button><button type="button" disabled={saving || !form.email} onClick={() => void verifyEmail(true)} className="font-bold text-slate-600 disabled:opacity-50">Ridërgo email-in</button></div></div>}
-          <button disabled={saving || (mode === 'register' && !acceptedTerms)} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-4 font-black text-white disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <>{mode === 'login' ? 'Hyr në llogari' : 'Krijo llogari'} <ArrowRight className="size-5" /></>}</button>
+          <button disabled={saving || (mode === 'register' && !acceptedTerms)} className="premium-button mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-black text-white disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <>{mode === 'login' ? 'Hyr në llogari' : 'Krijo llogari'} <ArrowRight className="size-5" /></>}</button>
           <Link href="/" className="mt-6 block text-center text-sm font-bold text-slate-500">Kthehu te faqja kryesore</Link>
         </form>
       </section>

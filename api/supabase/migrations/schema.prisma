@@ -1,3 +1,6 @@
+// Readable snapshot of the final Supabase schema.
+// Deployment source of truth: the timestamped SQL migrations in this folder.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,6 +10,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Identity and access control
+
 model StaffProfile {
   id                     String          @id @db.Uuid
   fullName               String          @map("full_name")
@@ -14,6 +19,7 @@ model StaffProfile {
   roleId                 Int             @map("role_id")
   active                 Boolean         @default(true)
   createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime        @default(now()) @map("updated_at") @db.Timestamptz(6)
   driver                 Driver?         @relation("StaffDriver")
   createdTrackingEvents  TrackingEvent[] @relation("TrackingEventCreator")
   assignedQuoteRequests  QuoteRequest[]  @relation("QuoteRequestAssignee")
@@ -21,6 +27,7 @@ model StaffProfile {
   role                   Role            @relation(fields: [roleId], references: [id], onDelete: Restrict)
   auditLogs              StaffAuditLog[]
 
+  @@index([roleId], map: "staff_profiles_role_id_idx")
   @@map("staff_profiles")
 }
 
@@ -34,6 +41,7 @@ model StaffAuditLog {
   createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   actor      StaffProfile? @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
+  @@index([actorId], map: "idx_staff_audit_logs_actor_id")
   @@index([createdAt(sort: Desc)], map: "staff_audit_logs_created_at_idx")
   @@map("staff_audit_logs")
 }
@@ -62,8 +70,11 @@ model RolePermission {
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+  @@index([permissionId], map: "role_permissions_permission_id_idx")
   @@map("role_permissions")
 }
+
+// Customer identities
 
 model CustomerProfile {
   id                String           @id @db.Uuid
@@ -72,6 +83,7 @@ model CustomerProfile {
   phone             String
   active            Boolean          @default(true)
   createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
   termsAcceptedAt   DateTime?        @map("terms_accepted_at") @db.Timestamptz(6)
   privacyAcceptedAt DateTime?        @map("privacy_accepted_at") @db.Timestamptz(6)
   shipments         Shipment[]
@@ -81,6 +93,8 @@ model CustomerProfile {
   @@map("customer_profiles")
 }
 
+// Delivery operations
+
 model Driver {
   id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   fullName        String           @map("full_name")
@@ -88,6 +102,7 @@ model Driver {
   status          String           @default("available")
   active          Boolean          @default(true)
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @default(now()) @map("updated_at") @db.Timestamptz(6)
   staffId         String?          @unique @map("staff_id") @db.Uuid
   staff           StaffProfile?    @relation("StaffDriver", fields: [staffId], references: [id], onDelete: SetNull)
   vehicles        Vehicle[]
@@ -105,14 +120,16 @@ model Vehicle {
   driverId           String?    @map("driver_id") @db.Uuid
   active             Boolean    @default(true)
   createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
   driver             Driver?    @relation(fields: [driverId], references: [id], onDelete: SetNull)
   shipments          Shipment[]
 
+  @@index([driverId], map: "idx_vehicles_driver_id")
   @@map("vehicles")
 }
 
 model Shipment {
-  id               String           @id @db.Uuid
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   trackingCode     String           @unique @map("tracking_code")
   senderName       String           @map("sender_name")
   senderPhone      String           @map("sender_phone")
@@ -149,13 +166,17 @@ model Shipment {
   claims           Claim[]
   deliveryRating   DeliveryRating?
 
+  @@unique([id, customerId], map: "shipments_id_customer_id_key")
+  @@unique([id, customerId, driverId], map: "shipments_id_customer_driver_id_key")
+  @@index([customerId, createdAt(sort: Desc)], map: "idx_shipments_customer_created")
+  @@index([driverId, status], map: "idx_shipments_driver_status")
   @@index([status, createdAt(sort: Desc)], map: "idx_shipments_status_created_at")
   @@index([pickupDate, driverId, routeOrder], map: "idx_shipments_pickup_date")
   @@map("shipments")
 }
 
 model TrackingEvent {
-  id         String        @id @db.Uuid
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shipmentId String        @map("shipment_id") @db.Uuid
   status     String
   location   String
@@ -167,12 +188,15 @@ model TrackingEvent {
   shipment   Shipment      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   creator    StaffProfile? @relation("TrackingEventCreator", fields: [createdBy], references: [id], onDelete: SetNull)
 
+  @@index([createdBy], map: "idx_tracking_events_created_by")
   @@index([shipmentId, createdAt(sort: Desc)], map: "idx_tracking_events_shipment_created")
   @@map("tracking_events")
 }
 
+// Customer care
+
 model QuoteRequest {
-  id             String        @id @db.Uuid
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   referenceCode  String        @unique @map("reference_code")
   customerName   String        @map("customer_name")
   phone          String
@@ -187,6 +211,7 @@ model QuoteRequest {
   updatedAt      DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
   assignee       StaffProfile? @relation("QuoteRequestAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
 
+  @@index([assignedTo], map: "idx_quote_requests_assigned_to")
   @@index([status, createdAt(sort: Desc)], map: "idx_quote_requests_status_created")
   @@map("quote_requests")
 }
@@ -207,6 +232,7 @@ model DeliveryProof {
   shipment        Shipment      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   recorder        StaffProfile? @relation("DeliveryProofRecorder", fields: [recordedBy], references: [id], onDelete: SetNull)
 
+  @@index([recordedBy], map: "idx_delivery_proofs_recorded_by")
   @@index([deliveredAt(sort: Desc)], map: "idx_delivery_proofs_delivered_at")
   @@map("delivery_proofs")
 }
@@ -221,6 +247,7 @@ model PickupPoint {
   longitude    Float?     @db.DoublePrecision
   active       Boolean    @default(true)
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime   @default(now()) @map("updated_at") @db.Timestamptz(6)
   shipments    Shipment[]
 
   @@map("pickup_points")
@@ -241,6 +268,9 @@ model Claim {
   shipment           Shipment        @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   customer           CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  @@index([shipmentId], map: "idx_claims_shipment_id")
+  @@index([customerId], map: "idx_claims_customer_id")
+  @@index([customerId, shipmentId], map: "idx_claims_customer_shipment")
   @@index([status, createdAt(sort: Desc)], map: "idx_claims_status_created")
   @@map("claims")
 }
@@ -257,6 +287,37 @@ model DeliveryRating {
   customer   CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
   driver     Driver          @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
+  @@index([customerId], map: "idx_delivery_ratings_customer_id")
+  @@index([customerId, shipmentId, driverId], map: "idx_delivery_ratings_customer_shipment_driver")
   @@index([driverId, createdAt(sort: Desc)], map: "idx_delivery_ratings_driver")
   @@map("delivery_ratings")
+}
+
+// Server-side security state
+
+model RequestLimit {
+  keyHash   String   @id @map("key_hash")
+  attempts  Int
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+
+  @@index([expiresAt], map: "request_limits_expiry")
+  @@map("request_limits")
+}
+
+model AuthGeneration {
+  userId     String @id @map("user_id") @db.Uuid
+  generation BigInt @default(0)
+
+  @@map("auth_generations")
+}
+
+model AppSession {
+  tokenHash String   @id @map("token_hash")
+  userId    String   @map("user_id") @db.Uuid
+  audience  String
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+
+  @@index([userId], map: "app_sessions_user")
+  @@index([expiresAt], map: "app_sessions_expiry")
+  @@map("app_sessions")
 }
