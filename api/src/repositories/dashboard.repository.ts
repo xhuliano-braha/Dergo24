@@ -52,13 +52,13 @@ export const dashboardRepository = {
       supabase
         .from('claims')
         .select(
-          'id, shipment_id, claim_type, description, requested_refund_all, approved_refund_all, status, staff_notes, created_at, shipments(tracking_code, recipient_name)',
+          'id, shipment_id, claim_type, description, requested_refund_all, approved_refund_all, status, staff_notes, created_at, shipments!claims_shipment_id_fkey(tracking_code, recipient_name)',
         )
         .order('created_at', { ascending: false }),
       supabase
         .from('delivery_ratings')
         .select(
-          'id, driver_id, rating, comment, created_at, drivers(full_name), shipments(tracking_code)',
+          'id, driver_id, rating, comment, created_at, drivers(full_name), shipments!delivery_ratings_shipment_id_fkey(tracking_code)',
         )
         .order('created_at', { ascending: false }),
       supabase
