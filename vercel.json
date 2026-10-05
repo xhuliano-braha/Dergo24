@@ -1,0 +1,4 @@
+{
+  "buildCommand": "cd web && vinext build",
+  "outputDirectory": "web/dist/client"
+}
