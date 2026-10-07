@@ -315,7 +315,6 @@ function StaffAccountRow({
           <option value="admin">Administrator</option>
           <option value="dispatcher">Dispeçer</option>
           <option value="support">Suport</option>
-          <option value="courier">Korrier</option>
         </select>
         <input
           aria-label={`Fjalëkalim i ri për ${account.full_name}`}
@@ -422,7 +421,6 @@ function CreateStaffCard({ onCreated }: { onCreated: () => Promise<void> }) {
       >
         <option value="dispatcher">Dispeçer</option>
         <option value="support">Suport</option>
-        <option value="courier">Korrier</option>
         <option value="admin">Administrator</option>
       </select>
       <label

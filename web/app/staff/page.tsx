@@ -237,10 +237,6 @@ export default function StaffPage() {
     setError('');
     try {
       const nextData = await apiRequest<DashboardData>('/api/staff/dashboard');
-      if (nextData.staff.role === 'courier') {
-        window.location.replace('/courier');
-        return;
-      }
       setData(nextData);
     } catch (loadError) {
       setData(null);
@@ -284,13 +280,7 @@ export default function StaffPage() {
       icon: Clock3,
       count: data.quotes.filter((quote) => quote.status === 'new').length,
     },
-    {
-      id: 'drivers' as const,
-      permission: 'drivers.view',
-      label: 'Korrierët',
-      icon: Users,
-      count: data.drivers.filter((driver) => driver.active).length,
-    },
+
     {
       id: 'operations' as const,
       permission: 'routes.optimize',

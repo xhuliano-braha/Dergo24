@@ -2,10 +2,10 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Dergo24 Courier',
+    name: 'Dergo24',
     short_name: 'Dergo24',
-    description: 'Paneli mobile i korrierëve Dergo24',
-    start_url: '/courier',
+    description: 'Dërgesa në gjithë Shqipërinë',
+    start_url: '/',
     display: 'standalone',
     background_color: '#071b33',
     theme_color: '#f45a0a',

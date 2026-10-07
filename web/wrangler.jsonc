@@ -16,7 +16,7 @@
     "binding": "CF_VERSION_METADATA"
   },
   "vars": {
-    "APP_ORIGIN": "https://dergo24.xhulianobraha.workers.dev",
+    "APP_ORIGIN": "https://dergo24.com",
     "TRUSTED_PROXY": "cloudflare"
   }
 }

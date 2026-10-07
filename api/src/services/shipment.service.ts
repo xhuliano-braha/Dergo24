@@ -28,7 +28,12 @@ function prepareShipment(
 
   const id = crypto.randomUUID();
   const trackingCode = createTrackingCode();
-  const price = calculatePrice(input.weight, input.service);
+  const price = calculatePrice(
+    input.weight,
+    input.service,
+    input.pickupCity,
+    address.city,
+  );
   return {
     shipment: {
       id,

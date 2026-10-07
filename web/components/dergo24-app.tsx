@@ -139,12 +139,20 @@ export function Dergo24App() {
   const [quoteError, setQuoteError] = useState('');
   const [quoteLoading, setQuoteLoading] = useState(false);
 
-  const estimate = useMemo(
-    () =>
-      (form.service === 'express' ? 800 : 500) +
-      Math.max(0, Math.ceil(Number(form.weight) || 1) - 1) * 100,
-    [form.service, form.weight],
-  );
+  const estimate = useMemo(() => {
+    const isTirana = (c?: string) =>
+      (c ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase() === 'tirane';
+    const isLocal = isTirana(form.pickupCity) && isTirana(form.deliveryCity);
+    const base = isLocal ? 200 : 300;
+    const extraWeight =
+      Math.max(0, Math.ceil(Number(form.weight) || 1) - 2) * 50;
+    const expressExtra = form.service === 'express' ? 100 : 0;
+    return base + extraWeight + expressExtra;
+  }, [form.pickupCity, form.deliveryCity, form.service, form.weight]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 24);
@@ -1059,12 +1067,12 @@ function BookingModal({
                 {
                   value: 'standard',
                   name: 'Standard',
-                  copy: '24–48 orë · nga 500 Lekë',
+                  copy: '24–48 orë · 200 L Tiranë / 300 L rrethe',
                 },
                 {
                   value: 'express',
                   name: 'Express',
-                  copy: 'Prioritet · nga 800 Lekë',
+                  copy: 'Prioritet brenda ditës (+100 Lekë)',
                 },
               ].map((s) => (
                 <button

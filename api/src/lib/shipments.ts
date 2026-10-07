@@ -25,8 +25,26 @@ export const bulkShipmentSchema = z.array(shipmentSchema).min(1).max(200);
 
 export type ShipmentInput = z.infer<typeof shipmentSchema>;
 
-export function calculatePrice(weight: number, service: ShipmentInput['service']) {
-  return (service === 'express' ? 800 : 500) + Math.max(0, Math.ceil(weight) - 1) * 100;
+function isTirana(city?: string) {
+  if (!city) return false;
+  return city
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase() === 'tirane';
+}
+
+export function calculatePrice(
+  weight: number,
+  service: ShipmentInput['service'],
+  pickupCity?: string,
+  deliveryCity?: string,
+) {
+  const isLocal = isTirana(pickupCity) && isTirana(deliveryCity);
+  const base = isLocal ? 200 : 300;
+  const extraWeight = Math.max(0, Math.ceil(weight) - 2) * 50;
+  const expressSurcharge = service === 'express' ? 100 : 0;
+  return base + extraWeight + expressSurcharge;
 }
 
 export function createTrackingCode() {
