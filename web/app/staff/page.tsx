@@ -35,12 +35,17 @@ import {
   Truck,
   Upload,
   UserPlus,
+  Users,
   X,
 } from 'lucide-react';
 import {
   StaffAccount,
   StaffSettingsPanel,
 } from '@/components/staff-settings-panel';
+import {
+  RegisteredCustomer,
+  RegisteredCustomersPanel,
+} from '@/components/registered-customers-panel';
 import { CopyTrackingButton } from '@/components/copy-tracking-button';
 
 type Staff = {
@@ -151,6 +156,7 @@ type DashboardData = {
   claims: Claim[];
   ratings: Rating[];
   pickupPoints: PickupPoint[];
+  registeredCustomers?: RegisteredCustomer[];
 };
 
 const shipmentStatuses = [
@@ -222,6 +228,7 @@ export default function StaffPage() {
     | 'operations'
     | 'claims'
     | 'reports'
+    | 'customers'
     | 'settings'
   >('shipments');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -307,6 +314,13 @@ export default function StaffPage() {
       count: data.shipments.filter(
         (shipment) => shipment.cod_status === 'collected',
       ).length,
+    },
+    {
+      id: 'customers' as const,
+      permission: 'staff.view',
+      label: 'Përdoruesit',
+      icon: Users,
+      count: data.registeredCustomers?.length || 0,
     },
     {
       id: 'settings' as const,
@@ -459,6 +473,12 @@ export default function StaffPage() {
             <ReportsPanel
               shipments={data.shipments}
               ratings={data.ratings}
+              onUpdated={loadDashboard}
+            />
+          )}
+          {tab === 'customers' && (
+            <RegisteredCustomersPanel
+              customers={data.registeredCustomers || []}
               onUpdated={loadDashboard}
             />
           )}

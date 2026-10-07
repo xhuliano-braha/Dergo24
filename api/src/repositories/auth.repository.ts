@@ -28,6 +28,17 @@ export const authRepository = {
       email_confirm: true,
     });
   },
+  async generateSignupLink(email: string, password?: string) {
+    const origin = process.env.APP_ORIGIN || 'https://dergo24.com';
+    return getSupabaseAdmin().auth.admin.generateLink({
+      type: 'signup',
+      email,
+      password: password || 'D24TempPass!99',
+      options: {
+        redirectTo: `${origin}/account?confirmed=true`,
+      },
+    });
+  },
   async sendConfirmation(email: string) {
     try {
       const origin = process.env.APP_ORIGIN || 'https://dergo24.com';

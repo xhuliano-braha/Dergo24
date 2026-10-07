@@ -12,6 +12,8 @@ export const dashboardService = {
       claimsResult,
       ratingsResult,
       pointsResult,
+      customersResult,
+      authUsersResult,
     } = await dashboardRepository.staff(staff.id, staff.role === 'courier');
 
     const error =
@@ -23,6 +25,32 @@ export const dashboardService = {
       ratingsResult.error ??
       pointsResult.error;
     if (error) throw new ApiError('Të dhënat nuk mund të ngarkoheshin.', 503);
+
+    const confirmedMap = new Map<string, boolean>(
+      (authUsersResult?.data?.users || []).map(
+        (user: { id: string; email_confirmed_at?: string | null }) => [
+          user.id,
+          Boolean(user.email_confirmed_at),
+        ],
+      ),
+    );
+
+    const registeredCustomers =
+      hasPermission(staff, 'staff.view') || staff.role === 'admin'
+        ? (customersResult.data ?? []).map(
+            (customer: {
+              id: string;
+              full_name: string;
+              email: string;
+              phone: string;
+              active: boolean;
+              created_at: string;
+            }) => ({
+              ...customer,
+              is_verified: confirmedMap.get(customer.id) ?? false,
+            }),
+          )
+        : [];
 
     return {
       staff,
@@ -52,6 +80,7 @@ export const dashboardService = {
                   : null,
             };
           }),
+      registeredCustomers,
       claims: hasPermission(staff, 'claims.view')
         ? (claimsResult.data ?? [])
         : [],

@@ -32,6 +32,8 @@ export const dashboardRepository = {
       claimsResult,
       ratingsResult,
       pointsResult,
+      customersResult,
+      authUsersResult,
     ] = await Promise.all([
       shipmentsQuery,
       supabase
@@ -65,6 +67,12 @@ export const dashboardRepository = {
         .from('pickup_points')
         .select('id, name, city, address, opening_hours, active')
         .order('city'),
+      supabase
+        .from('customer_profiles')
+        .select('id, full_name, email, phone, active, created_at')
+        .order('created_at', { ascending: false })
+        .limit(300),
+      supabase.auth.admin.listUsers({ perPage: 1000 }),
     ]);
 
     return {
@@ -75,6 +83,8 @@ export const dashboardRepository = {
       claimsResult,
       ratingsResult,
       pointsResult,
+      customersResult,
+      authUsersResult,
     };
   },
   customer(customerId: string) {

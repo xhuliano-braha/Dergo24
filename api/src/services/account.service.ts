@@ -23,6 +23,7 @@ import {
   revokeUserSessions,
 } from '../security/app-session';
 import { securityRepository } from '../repositories/security.repository';
+import { sendVerificationEmail } from './mailer.service';
 
 async function loginGeneration(email: string, audience: 'customer' | 'staff') {
   const { data: profile, error } = await accountRepository.findLoginProfile(
@@ -225,7 +226,23 @@ export const accountService = {
       await rollbackUser(created.user.id);
       throw new ApiError('Llogaria nuk mund të krijohej.', 503);
     }
-    await authRepository.sendConfirmation(email);
+    const linkRes = await authRepository.generateSignupLink(
+      email,
+      input.password,
+    );
+    const otp = linkRes?.data?.properties?.email_otp;
+    const actionLink = linkRes?.data?.properties?.action_link;
+
+    if (otp && actionLink) {
+      await sendVerificationEmail({
+        to: email,
+        fullName: input.fullName,
+        otp,
+        actionLink,
+      });
+    }
+
+    void authRepository.sendConfirmation(email);
     return {
       verificationRequired: true,
       success: true,
@@ -235,11 +252,25 @@ export const accountService = {
     };
   },
   async resendConfirmation(email: string, client: string) {
-    await throttleAuth(`resend:${client}:${email}`, 3, 3600);
-    await authRepository.sendConfirmation(email.toLowerCase());
+    const cleanEmail = email.toLowerCase();
+    await throttleAuth(`resend:${client}:${cleanEmail}`, 3, 3600);
+    const linkRes = await authRepository.generateSignupLink(cleanEmail);
+    const otp = linkRes?.data?.properties?.email_otp;
+    const actionLink = linkRes?.data?.properties?.action_link;
+
+    if (otp && actionLink) {
+      await sendVerificationEmail({
+        to: cleanEmail,
+        fullName: 'Klient',
+        otp,
+        actionLink,
+      });
+    }
+
+    void authRepository.sendConfirmation(cleanEmail);
     return {
       success: true,
-      message: 'Nëse llogaria pret verifikim, kontrolloni email-in.',
+      message: 'Kemi dërguar kodin e verifikimit në email-in tuaj.',
     };
   },
   async verifyEmail(email: string, token: string, client: string) {
