@@ -19,7 +19,7 @@ export function setStaffSession(
 ) {
   response.cookies.set(STAFF_SESSION_COOKIE, accessToken, {
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: expiresIn,
@@ -29,7 +29,7 @@ export function setStaffSession(
 export function clearStaffSession(response: NextResponse) {
   response.cookies.set(STAFF_SESSION_COOKIE, '', {
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: 0,

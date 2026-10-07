@@ -5,7 +5,7 @@ export const shipmentRepository = {
     return getSupabaseAdmin()
       .from('shipments')
       .select(
-        'id, tracking_code, pickup_city, delivery_city, status, service, created_at',
+        'id, tracking_code, pickup_city, delivery_city, status, service, package_type, weight_kg, delivery_method, created_at',
       )
       .eq('tracking_code', trackingCode)
       .maybeSingle();
@@ -14,7 +14,7 @@ export const shipmentRepository = {
   findTrackingEvents(shipmentId: string) {
     return getSupabaseAdmin()
       .from('tracking_events')
-      .select('status, created_at')
+      .select('status, location, details, latitude, longitude, created_at')
       .eq('shipment_id', shipmentId)
       .order('created_at', { ascending: false });
   },

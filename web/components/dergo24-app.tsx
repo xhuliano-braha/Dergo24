@@ -4,9 +4,13 @@ import { SyntheticEvent, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
+  AlertCircle,
   ArrowRight,
+  Box,
   Check,
+  CheckCircle2,
   Clock3,
+  ExternalLink,
   Headphones,
   MapPin,
   Menu,
@@ -14,9 +18,11 @@ import {
   Route,
   Search,
   ShieldCheck,
+  Sparkles,
   Truck,
   UserRound,
   X,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,6 +88,11 @@ type TrackingResult = {
     pickupCity: string;
     deliveryCity: string;
     status: string;
+    service?: string;
+    packageType?: string;
+    weightKg?: number;
+    deliveryMethod?: string;
+    createdAt?: string;
   };
   events: Array<{
     status: string;
@@ -120,6 +131,40 @@ const initialQuote = {
   itemType: 'Mobilje',
   description: '',
 };
+
+const TRACKING_MILESTONES = [
+  { key: 'regjistruar', title: 'Regjistruar', desc: 'Porosia u regjistrua' },
+  { key: 'pritje', title: 'Në pritje', desc: 'Përgatitje për marrje' },
+  { key: 'mor', title: 'U mor', desc: 'Korrieri mori pakon' },
+  { key: 'transport', title: 'Në transport', desc: 'Tranzit logjistik' },
+  { key: 'shperndarje', title: 'Në shpërndarje', desc: 'Rrugës tek adresa' },
+  { key: 'dorezuar', title: 'U dorëzua', desc: 'Dorëzimi u krye' },
+];
+
+function getStageIndex(status?: string) {
+  const s = (status || '').toLowerCase();
+  if (s.includes('dorëz') || s.includes('dorez')) return 5;
+  if (s.includes('shpërndarje') || s.includes('shperndarje')) return 4;
+  if (s.includes('transport') || s.includes('tranzit')) return 3;
+  if (s.includes('mor') || s.includes('marre') || s.includes('marrë')) return 2;
+  if (s.includes('pritje')) return 1;
+  return 0;
+}
+
+function formatTrackingTime(dateString?: string) {
+  if (!dateString) return '';
+  try {
+    return new Intl.DateTimeFormat('sq-AL', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(dateString));
+  } catch {
+    return dateString;
+  }
+}
 
 export function Dergo24App() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -476,83 +521,383 @@ export function Dergo24App() {
         className="relative z-10 mx-auto -mt-16 max-w-6xl px-5 lg:px-8"
         data-reveal
       >
-        <div className="glass-dark-panel relative overflow-hidden rounded-[2rem] p-5 text-white backdrop-blur-2xl sm:p-8">
-          <div className="premium-glow pointer-events-none absolute -right-28 -top-36 size-80 opacity-60" />
-          <div className="grid gap-6 lg:grid-cols-[.8fr_1.4fr] lg:items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[.15em] text-white/50">
-                Gjurmim në kohë reale
-              </p>
-              <h2 className="mt-2 text-2xl font-bold tracking-tight">
-                Ku ndodhet pakoja ime?
-              </h2>
+        <div className="glass-dark-panel relative overflow-hidden rounded-[2.5rem] border border-white/15 p-6 text-white shadow-2xl backdrop-blur-2xl sm:p-10">
+          <div className="premium-glow pointer-events-none absolute -right-24 -top-32 size-96 opacity-70" />
+          <div className="pointer-events-none absolute -bottom-32 -left-24 size-80 rounded-full bg-primary/20 blur-3xl" />
+
+          {/* Top Search Section */}
+          <div className="relative z-10">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3.5 py-1 text-xs font-black uppercase tracking-[0.18em] text-orange-400">
+                  <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
+                  Gjurmim në kohë reale
+                </span>
+                <h2 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">
+                  Gjurmo dërgesën tënde
+                </h2>
+                <p className="mt-1 text-sm text-slate-300">
+                  Vendosni kodin e gjurmimit për të parë vendndodhjen, itinerarin dhe statusin live.
+                </p>
+              </div>
+
+              <div className="hidden rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300 md:block">
+                <span className="font-semibold text-white/50">Formati i kodit:</span>{' '}
+                <span className="font-mono font-bold text-orange-400">D24-YY-XXXXXX</span>
+              </div>
             </div>
+
             <form
               onSubmit={trackShipment}
-              className="flex flex-col gap-3 sm:flex-row"
+              className="mt-6 flex flex-col gap-3 sm:flex-row"
             >
               <div className="relative flex-1">
-                <PackageCheck className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-white/35" />
+                <PackageCheck className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-orange-400" />
                 <Input
                   value={trackingCode}
-                  onChange={(event) => setTrackingCode(event.target.value)}
-                  placeholder="P.sh. D24-26-AB12CD34"
-                  className="h-14 rounded-xl border-white/10 bg-white/8 pl-12 font-mono text-white placeholder:text-white/35"
+                  onChange={(event) => setTrackingCode(event.target.value.toUpperCase())}
+                  placeholder="Vendosni kodin (p.sh. D24-26-AB12CD34)"
+                  className="h-14 rounded-2xl border-white/15 bg-white/10 pl-12 pr-10 font-mono text-base font-bold uppercase tracking-wider text-white placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder:text-white/40 focus:border-orange-400 focus:bg-white/15 focus:ring-4 focus:ring-orange-500/20"
                 />
+                {trackingCode && (
+                  <button
+                    type="button"
+                    onClick={() => { setTrackingCode(''); setTracking(null); setTrackingError(''); }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/50 hover:bg-white/10 hover:text-white"
+                    aria-label="Pastro kodin"
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
               </div>
               <Button
                 type="submit"
-                disabled={trackingLoading}
-                className="h-14 rounded-xl px-7 font-bold"
+                disabled={trackingLoading || !trackingCode.trim()}
+                className="h-14 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 px-8 text-base font-black text-white shadow-lg shadow-orange-500/30 transition-all duration-300 hover:scale-[1.02] hover:from-orange-600 hover:to-amber-600 disabled:opacity-50"
               >
-                {trackingLoading ? 'Duke kërkuar...' : 'Gjurmo dërgesën'}{' '}
-                <Search />
+                {trackingLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Duke kërkuar...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    Gjurmo dërgesën <Search className="size-5" />
+                  </span>
+                )}
               </Button>
             </form>
-          </div>
-          {trackingError && (
-            <p className="mt-5 rounded-xl bg-white/8 px-4 py-3 text-sm text-red-200">
-              {trackingError}
-            </p>
-          )}
-          {tracking && (
-            <div className="mt-7 grid gap-5 border-t border-white/10 pt-7 lg:grid-cols-[.8fr_1.2fr]">
-              <div>
-                <div className="flex items-center gap-2"><p className="font-mono text-sm text-white/50">{tracking.shipment.trackingCode}</p><CopyTrackingButton value={tracking.shipment.trackingCode} compact dark /></div>
-                <p className="mt-2 text-2xl font-bold">
-                  {tracking.shipment.status}
-                </p>
-                <p className="mt-2 flex items-center gap-2 text-sm text-white/60">
-                  <Route className="size-4" /> {tracking.shipment.pickupCity} →{' '}
-                  {tracking.shipment.deliveryCity}
-                </p>
+
+            {trackingError && (
+              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-red-500/30 bg-red-950/40 p-4 text-sm text-red-200">
+                <AlertCircle className="size-5 shrink-0 text-red-400" />
+                <div>
+                  <p className="font-bold">{trackingError}</p>
+                  <p className="text-xs text-red-300/80">Ju lutem kontrolloni kodin e dërgesës ose kontaktoni mbështetjen e klientit.</p>
+                </div>
               </div>
-              <div className="space-y-4">
-                {tracking.events.map((item) => (
-                  <div key={item.createdAt} className="flex gap-4">
-                    <span className="mt-1 grid size-7 shrink-0 place-items-center rounded-full bg-primary">
-                      <Check className="size-4" />
-                    </span>
-                    <div>
-                      <p className="font-semibold">
-                        {item.status} · {item.location}
-                      </p>
-                      <p className="mt-1 text-sm text-white/55">
-                        {item.details}
-                      </p>
-                      {item.latitude !== null && item.longitude !== null && (
-                        <a
-                          href={`https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=16/${item.latitude}/${item.longitude}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-orange-300 hover:text-orange-200"
+            )}
+          </div>
+
+          {/* ACTIVE TRACKING RESULTS */}
+          {tracking && (
+            <div className="relative z-10 mt-8 space-y-6 border-t border-white/10 pt-8">
+              {/* Shipment Header Banner */}
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/50">Kodi i dërgesës</span>
+                    <span className="font-mono text-base font-black tracking-wider text-orange-400">{tracking.shipment.trackingCode}</span>
+                    <CopyTrackingButton value={tracking.shipment.trackingCode} compact dark />
+                  </div>
+                  {tracking.shipment.createdAt && (
+                    <p className="text-xs text-white/60">
+                      Regjistruar më: {formatTrackingTime(tracking.shipment.createdAt)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider ${
+                    tracking.shipment.status === 'U dorëzua'
+                      ? 'border border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
+                      : tracking.shipment.status === 'U anulua'
+                      ? 'border border-red-500/40 bg-red-500/20 text-red-300'
+                      : 'border border-orange-500/40 bg-orange-500/20 text-orange-300 ring-2 ring-orange-500/20'
+                  }`}>
+                    {tracking.shipment.status === 'U dorëzua' ? (
+                      <CheckCircle2 className="size-4 text-emerald-400" />
+                    ) : tracking.shipment.status === 'U anulua' ? (
+                      <AlertCircle className="size-4 text-red-400" />
+                    ) : (
+                      <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                    )}
+                    {tracking.shipment.status}
+                  </span>
+
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-bold text-white/80">
+                    <Zap className="size-3.5 text-amber-400" />
+                    {tracking.shipment.service === 'express' ? 'Express (Prioritet)' : 'Standard (24–48h)'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Visual 6-Step Milestone Stepper */}
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md">
+                <p className="mb-6 text-xs font-black uppercase tracking-[0.2em] text-white/50">
+                  Ecuria e dërgesës
+                </p>
+
+                <div className="relative">
+                  {/* Connecting Progress Bar */}
+                  <div className="absolute top-5 left-4 right-4 hidden h-1 -translate-y-1/2 bg-white/10 sm:block">
+                    <div
+                      className="h-full bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 transition-all duration-700 ease-out"
+                      style={{
+                        width: `${Math.min(100, Math.max(5, (getStageIndex(tracking.shipment.status) / (TRACKING_MILESTONES.length - 1)) * 100))}%`,
+                      }}
+                    />
+                  </div>
+
+                  {/* Stepper Nodes */}
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-6 sm:gap-2">
+                    {TRACKING_MILESTONES.map((milestone, idx) => {
+                      const currentIdx = getStageIndex(tracking.shipment.status);
+                      const isCompleted = idx < currentIdx;
+                      const isCurrent = idx === currentIdx;
+
+                      return (
+                        <div
+                          key={milestone.key}
+                          className="relative flex flex-col items-center text-center group"
                         >
-                          <MapPin className="size-3.5" /> Shiko pozicionin në hartë
-                        </a>
-                      )}
+                          {/* Circle Icon */}
+                          <div
+                            className={`relative z-10 grid size-10 place-items-center rounded-full text-xs font-black transition-all duration-300 ${
+                              isCompleted
+                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-400/40'
+                                : isCurrent
+                                ? 'bg-gradient-to-tr from-orange-600 to-amber-500 text-white shadow-xl shadow-orange-500/50 ring-4 ring-orange-400/30 scale-110'
+                                : 'border border-white/15 bg-white/5 text-white/40'
+                            }`}
+                          >
+                            {isCompleted ? (
+                              <Check className="size-5 stroke-[2.5]" />
+                            ) : isCurrent ? (
+                              <Truck className="size-5 text-white animate-pulse" />
+                            ) : (
+                              <span>{idx + 1}</span>
+                            )}
+                          </div>
+
+                          {/* Titles */}
+                          <p
+                            className={`mt-3 text-xs font-black transition-colors ${
+                              isCurrent
+                                ? 'text-orange-400'
+                                : isCompleted
+                                ? 'text-white'
+                                : 'text-white/40'
+                            }`}
+                          >
+                            {milestone.title}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-white/50 hidden sm:block">
+                            {isCompleted ? 'Përfunduar' : isCurrent ? 'Në proces' : 'Në pritje'}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Detail Cards Grid */}
+              <div className="grid gap-6 lg:grid-cols-[1fr_1.3fr]">
+                {/* Left: Route & Package Specifications */}
+                <div className="space-y-4">
+                  {/* Route Visualizer Card */}
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-white/50">Itinerari</p>
+                    <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="grid size-10 place-items-center rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                          <MapPin className="size-5" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wider text-white/50">Nisja</p>
+                          <p className="font-black text-white sm:text-base">{tracking.shipment.pickupCity}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-1 flex-col items-center px-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-orange-400">Direkt</span>
+                        <div className="relative mt-1 flex w-full items-center">
+                          <div className="h-0.5 w-full border-t border-dashed border-white/20" />
+                          <Truck className="absolute left-1/2 size-4 -translate-x-1/2 text-orange-400 animate-pulse" />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-right">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wider text-white/50">Destinacioni</p>
+                          <p className="font-black text-white sm:text-base">{tracking.shipment.deliveryCity}</p>
+                        </div>
+                        <div className="grid size-10 place-items-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          <CheckCircle2 className="size-5" />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                ))}
+
+                  {/* Package Metadata Card */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center gap-2 text-white/50">
+                        <Box className="size-4 text-orange-400" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Lloji i pakos</span>
+                      </div>
+                      <p className="mt-2 text-sm font-black text-white">{tracking.shipment.packageType || 'Pako standarde'}</p>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center gap-2 text-white/50">
+                        <Zap className="size-4 text-orange-400" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Pesha</span>
+                      </div>
+                      <p className="mt-2 text-sm font-black text-white">{tracking.shipment.weightKg ? `${tracking.shipment.weightKg} kg` : 'Nën 2 kg'}</p>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center gap-2 text-white/50">
+                        <Truck className="size-4 text-orange-400" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Dorëzimi</span>
+                      </div>
+                      <p className="mt-2 text-sm font-black text-white">
+                        {tracking.shipment.deliveryMethod === 'pickup_point' ? 'Pikë Dergo24' : 'Derë më derë'}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                      <div className="flex items-center gap-2 text-white/50">
+                        <ShieldCheck className="size-4 text-emerald-400" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Siguria</span>
+                      </div>
+                      <p className="mt-2 text-sm font-black text-emerald-300">Gjurmim i mbrojtur</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Detailed Tracking Events Log */}
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+                  <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-white/50">
+                      Historiku i detajuar
+                    </p>
+                    <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold text-white/70">
+                      {tracking.events.length} ndryshime
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-4">
+                    {tracking.events.map((item, index) => {
+                      const isLatest = index === 0;
+
+                      return (
+                        <div
+                          key={`${item.createdAt}-${item.status}-${index}`}
+                          className={`relative rounded-xl border p-4 transition-all duration-200 ${
+                            isLatest
+                              ? 'border-orange-500/40 bg-orange-500/5 shadow-md shadow-orange-500/5'
+                              : 'border-white/5 bg-white/2 hover:border-white/10'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`grid size-7 place-items-center rounded-lg text-xs font-black ${
+                                  isLatest
+                                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
+                                    : 'bg-white/10 text-white/50'
+                                }`}
+                              >
+                                {isLatest ? <CheckCircle2 className="size-4" /> : <Clock3 className="size-3.5" />}
+                              </span>
+                              <p className="text-sm font-black text-white">{item.status}</p>
+                            </div>
+
+                            {isLatest && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-300 border border-emerald-500/30">
+                                <span className="size-1.5 rounded-full bg-emerald-400 animate-ping" />
+                                Më i fundit
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/60">
+                            <span className="flex items-center gap-1 text-orange-300 font-semibold">
+                              <MapPin className="size-3.5" /> {item.location}
+                            </span>
+                            <span>·</span>
+                            <span className="font-mono text-white/50">{formatTrackingTime(item.createdAt)}</span>
+                          </div>
+
+                          <p className="mt-2 text-xs leading-relaxed text-white/70">
+                            {item.details}
+                          </p>
+
+                          {item.latitude !== null && item.longitude !== null && (
+                            <a
+                              href={`https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=16/${item.latitude}/${item.longitude}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-orange-300 transition-colors hover:bg-orange-500/20 hover:text-white"
+                            >
+                              <MapPin className="size-3.5" /> Shiko vendndodhjen në hartë (GPS) <ExternalLink className="size-3" />
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* EMPTY STATE / MARKETING VALUE */}
+          {!tracking && !trackingLoading && (
+            <div className="relative z-10 mt-8 border-t border-white/10 pt-8">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md transition-all duration-300 hover:border-orange-500/30 hover:bg-white/10">
+                  <div className="grid size-10 place-items-center rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                    <Sparkles className="size-5" />
+                  </div>
+                  <h3 className="mt-3 font-black text-white">Gjurmim në Çdo Hap</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-white/60">
+                    Nga marrja në adresë deri te dorëzimi përfundimtar, shikoni statusin në sekondë.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md transition-all duration-300 hover:border-orange-500/30 hover:bg-white/10">
+                  <div className="grid size-10 place-items-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                    <MapPin className="size-5" />
+                  </div>
+                  <h3 className="mt-3 font-black text-white">Pozicionim me GPS</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-white/60">
+                    Korrierët tanë regjistrojnë koordinatat gjeografike gjatë çdo dorëzimi në terren.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md transition-all duration-300 hover:border-orange-500/30 hover:bg-white/10">
+                  <div className="grid size-10 place-items-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <ShieldCheck className="size-5" />
+                  </div>
+                  <h3 className="mt-3 font-black text-white">Verifikim & Siguri</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-white/60">
+                    Konfirmim me nënshkrim dhe garanci për integritetin e çdo pakoe të dërguar.
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -1067,7 +1412,6 @@ function BookingModal({
                 placeholder="0"
               />
               <FormInput label="Data e marrjes" value={form.pickupDate} onChange={(v) => field('pickupDate', v)} type="date" min={new Date().toISOString().slice(0, 10)} />
-              <FormSelect label="Orari i preferuar i dorëzimit" value={form.deliveryWindow} onChange={(v) => field('deliveryWindow', v)} options={['anytime', '09:00-13:00', '13:00-17:00', '17:00-20:00']} />
             </div>
             <p className="mb-3 mt-6 text-sm font-bold">Mënyra e dorëzimit</p>
             <div className="grid gap-3 sm:grid-cols-2">

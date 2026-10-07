@@ -11,7 +11,7 @@ export const customerRegisterSchema = customerLoginSchema.extend({
   phone: z
     .string()
     .trim()
-    .regex(/^\+?[0-9 ]{8,16}$/),
+    .regex(/^\+?[0-9 \-.]{8,20}$/, 'Numër telefoni i pasaktë.'),
   acceptedTerms: z.literal(true),
 });
 

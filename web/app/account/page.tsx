@@ -98,7 +98,12 @@ export default function AccountPage() {
       setData(await apiRequest<AccountData>('/api/account/dashboard'));
     } catch (loadError) {
       setData(null);
-      if (loadError instanceof Error && !loadError.message.includes('Sesioni'))
+      if (
+        loadError instanceof Error &&
+        !loadError.message.includes('Sesioni') &&
+        !loadError.message.includes('skaduar') &&
+        !loadError.message.includes('Dërgesat')
+      )
         setError(loadError.message);
     } finally {
       setLoading(false);
@@ -171,20 +176,25 @@ export default function AccountPage() {
 function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<void>; initialError: string }) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [form, setForm] = useState({ fullName: '', phone: '', email: '', password: '' });
-  const [error, setError] = useState(initialError);
+  const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [notice, setNotice] = useState('');
 
+  const activeError = error || initialError;
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const hash = window.location.hash;
     const search = window.location.search;
     if (hash.includes('access_token') || hash.includes('type=signup') || search.includes('confirmed=true')) {
-      setNotice('Email-i juaj u konfirmua me sukses! Vendosni fjalëkalimin për të hyrë.');
-      setMode('login');
+      const timer = window.setTimeout(() => {
+        setNotice('Email-i juaj u konfirmua me sukses! Vendosni fjalëkalimin për të hyrë.');
+        setMode('login');
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, []);
 
@@ -246,7 +256,7 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
           <Field id="customer-email" label="Email"><input id="customer-email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="form-control" autoComplete="email" required /></Field>
           <Field id="customer-password" label="Fjalëkalimi"><input id="customer-password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="form-control" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required /></Field>
           {mode === 'register' && <label className="mt-5 flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 size-4 accent-orange-500" required /><span>Pranoj <Link href="/terms" target="_blank" className="font-black text-orange-600 underline">kushtet</Link> dhe <Link href="/privacy" target="_blank" className="font-black text-orange-600 underline">privatësinë</Link>.</span></label>}
-          {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+          {activeError && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{activeError}</p>}
           {notice && <output className="mt-4 block rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">{notice}</output>}
           <button type="button" onClick={() => setVerificationOpen(!verificationOpen)} className="mt-4 text-sm font-bold text-orange-700">Verifiko email-in / Ridërgo konfirmimin</button>
           {verificationOpen && <div className="mt-3 rounded-xl bg-slate-50 p-4"><label htmlFor="email-verification-code" className="text-sm font-bold">Kodi nga email-i (nëse shfaqet)</label><input id="email-verification-code" value={verificationCode} onChange={(event) => setVerificationCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={10} className="form-control mt-2" /><div className="mt-3 flex gap-4"><button type="button" disabled={saving || !form.email || !/^\d{6,10}$/.test(verificationCode)} onClick={() => void verifyEmail(false)} className="font-bold text-orange-700 disabled:opacity-50">Verifiko</button><button type="button" disabled={saving || !form.email} onClick={() => void verifyEmail(true)} className="font-bold text-slate-600 disabled:opacity-50">Ridërgo email-in</button></div></div>}

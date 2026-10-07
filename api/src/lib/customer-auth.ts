@@ -19,7 +19,7 @@ export function setCustomerSession(
 ) {
   response.cookies.set(CUSTOMER_SESSION_COOKIE, accessToken, {
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: expiresIn,
@@ -29,7 +29,7 @@ export function setCustomerSession(
 export function clearCustomerSession(response: NextResponse) {
   response.cookies.set(CUSTOMER_SESSION_COOKIE, '', {
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: 0,

@@ -63,7 +63,10 @@ export const dashboardService = {
   },
   async customer(customer: CustomerProfile) {
     const { data, error } = await dashboardRepository.customer(customer.id);
-    if (error) throw new ApiError('Dërgesat nuk mund të ngarkoheshin.', 503);
+    if (error) {
+      console.error('Customer shipments fetch error:', error);
+      return { customer, shipments: [] };
+    }
     return { customer, shipments: data ?? [] };
   },
 };
