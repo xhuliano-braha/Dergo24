@@ -315,7 +315,7 @@ export default function StaffPage() {
       icon: Settings,
       count: data.staffAccounts.filter((account) => account.active).length,
     },
-  ].filter((item) => data.staff.permissions.includes(item.permission));
+  ].filter((item) => data.staff.role === 'admin' || data.staff.permissions.includes(item.permission));
 
   async function logout() {
     await apiRequest('/api/staff/auth', { method: 'DELETE' });
@@ -1107,7 +1107,7 @@ function ShipmentDialog({
               onClick={onProof}
               disabled={
                 !shipment.delivery_proofs &&
-                (closed || !staff.permissions.includes('shipments.deliver'))
+                (closed || (!staff.permissions.includes('shipments.deliver') && staff.role !== 'admin'))
               }
               className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 font-black text-white disabled:opacity-60"
             >
@@ -1280,7 +1280,7 @@ function DriversPanel({
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const canManage = staff.permissions.includes('drivers.manage');
+  const canManage = staff.role === 'admin' || staff.permissions.includes('drivers.manage');
   async function create(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -1726,7 +1726,7 @@ function OperationsPanel({
           ))}
         </div>
       </article>
-      {data.staff.permissions.includes('pickup_points.manage') && (
+      {(data.staff.role === 'admin' || data.staff.permissions.includes('pickup_points.manage')) && (
         <form
           onSubmit={createPoint}
           className="rounded-2xl bg-[#071b33] p-5 text-white"

@@ -2,6 +2,7 @@ import { ApiError } from '../errors/api-error';
 import type { PermissionCode, StaffProfile } from '../types/profiles';
 
 export function hasPermission(staff: StaffProfile, permission: PermissionCode) {
+  if (staff.role === 'admin') return true;
   return staff.permissions.includes(permission);
 }
 

@@ -10,6 +10,7 @@ import type { StaffProfile } from '../types/profiles';
 import { shipmentUpdateSchema } from '../lib/staff-schemas';
 import { shipmentRepository } from '../repositories/shipment.repository';
 import { atomicWriteError } from '../errors/atomic-write-error';
+import { requirePermission } from '../auth/permissions';
 
 type ShipmentUpdateInput = output<typeof shipmentUpdateSchema>;
 
@@ -144,8 +145,7 @@ export const shipmentService = {
   },
 
   async importMany(inputs: ShipmentInput[], staff: StaffProfile) {
-    if (!staff.permissions.includes('shipments.import'))
-      throw new ApiError('Nuk keni leje për import.', 403);
+    requirePermission(staff, 'shipments.import');
 
     const createdAt = new Date().toISOString();
     const prepared = inputs.map((input) => {
@@ -189,8 +189,7 @@ export const shipmentService = {
     input: ShipmentUpdateInput,
     staff: StaffProfile,
   ) {
-    if (!staff.permissions.includes('shipments.update'))
-      throw new ApiError('Nuk keni leje për të ndryshuar dërgesën.', 403);
+    requirePermission(staff, 'shipments.update');
     const { data: currentShipment, error: currentShipmentError } =
       await shipmentRepository.findForUpdate(shipmentId);
     if (currentShipmentError)

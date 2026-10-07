@@ -10,7 +10,6 @@ import {
   Check,
   CheckCircle2,
   Clock3,
-  ExternalLink,
   Headphones,
   MapPin,
   Menu,
@@ -183,6 +182,27 @@ export function Dergo24App() {
   const [quoteResult, setQuoteResult] = useState<QuoteResult | null>(null);
   const [quoteError, setQuoteError] = useState('');
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: string; fullName: string; email: string; phone?: string } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/account/auth')
+      .then(async (res) => (res.ok ? (res.json() as Promise<{ authenticated?: boolean; customer?: { id: string; fullName: string; email: string; phone?: string } }>) : null))
+      .then((resData) => {
+        if (active && resData?.authenticated && resData?.customer) {
+          setCurrentUser(resData.customer);
+          setForm((prev) => ({
+            ...prev,
+            senderName: prev.senderName || resData.customer?.fullName || '',
+            senderPhone: prev.senderPhone || resData.customer?.phone || '',
+          }));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const estimate = useMemo(() => {
     const isTirana = (c?: string) =>
@@ -402,12 +422,27 @@ export function Dergo24App() {
             <a className="relative transition-colors after:absolute after:-bottom-2 after:left-0 after:h-0.5 after:w-0 after:bg-primary after:transition-all hover:text-primary hover:after:w-full" href="#kontakt">Kontakt</a>
           </nav>
           <div className="hidden items-center gap-3 lg:flex">
-            <Link
-              href="/account"
-              className="flex h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold hover:bg-slate-100"
-            >
-              <UserRound className="size-4" /> Llogaria ime
-            </Link>
+            {currentUser ? (
+              <Link
+                href="/account"
+                className="flex h-11 items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-50/90 px-3.5 py-1 text-xs font-bold text-emerald-800 shadow-sm transition hover:bg-emerald-100 hover:border-emerald-500/50"
+                title={`I identifikuar si ${currentUser.fullName}`}
+              >
+                <span className="relative flex size-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex size-2.5 rounded-full bg-emerald-600" />
+                </span>
+                <span className="max-w-[120px] truncate">{currentUser.fullName}</span>
+                <span className="rounded bg-emerald-200/70 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-900">Llogaria</span>
+              </Link>
+            ) : (
+              <Link
+                href="/account"
+                className="flex h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold hover:bg-slate-100"
+              >
+                <UserRound className="size-4" /> Hyr / Llogaria
+              </Link>
+            )}
             <Button
               variant="ghost"
               className="h-11 px-4"
@@ -442,9 +477,23 @@ export function Dergo24App() {
               <a href="#mbulim" onClick={() => setMenuOpen(false)}>
                 Mbulimi
               </a>
-              <Link href="/account" onClick={() => setMenuOpen(false)}>
-                Llogaria ime
-              </Link>
+              {currentUser ? (
+                <Link
+                  href="/account"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className="size-2 rounded-full bg-emerald-600 animate-pulse" />
+                    <span>{currentUser.fullName}</span>
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Llogaria ime</span>
+                </Link>
+              ) : (
+                <Link href="/account" onClick={() => setMenuOpen(false)}>
+                  Hyr / Llogaria ime
+                </Link>
+              )}
               <Button
                 className="mt-2 h-11"
                 onClick={() => setBookingOpen(true)}
@@ -845,17 +894,6 @@ export function Dergo24App() {
                           <p className="mt-2 text-xs leading-relaxed text-white/70">
                             {item.details}
                           </p>
-
-                          {item.latitude !== null && item.longitude !== null && (
-                            <a
-                              href={`https://www.openstreetmap.org/?mlat=${item.latitude}&mlon=${item.longitude}#map=16/${item.latitude}/${item.longitude}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-bold text-orange-300 transition-colors hover:bg-orange-500/20 hover:text-white"
-                            >
-                              <MapPin className="size-3.5" /> Shiko vendndodhjen në hartë (GPS) <ExternalLink className="size-3" />
-                            </a>
-                          )}
                         </div>
                       );
                     })}
@@ -881,11 +919,11 @@ export function Dergo24App() {
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md transition-all duration-300 hover:border-orange-500/30 hover:bg-white/10">
                   <div className="grid size-10 place-items-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                    <MapPin className="size-5" />
+                    <Truck className="size-5" />
                   </div>
-                  <h3 className="mt-3 font-black text-white">Pozicionim me GPS</h3>
+                  <h3 className="mt-3 font-black text-white">Mbulim në 61 Bashki</h3>
                   <p className="mt-1 text-xs leading-relaxed text-white/60">
-                    Korrierët tanë regjistrojnë koordinatat gjeografike gjatë çdo dorëzimi në terren.
+                    Rrjet i gjerë në të gjithë territorin e Shqipërisë me dërgim të sigurt derë më derë.
                   </p>
                 </div>
 
@@ -1184,6 +1222,7 @@ export function Dergo24App() {
 
       {bookingOpen && (
         <BookingModal
+          currentUser={currentUser}
           form={form}
           field={field}
           estimate={estimate}
@@ -1221,6 +1260,7 @@ export function Dergo24App() {
 }
 
 function BookingModal({
+  currentUser,
   form,
   field,
   estimate,
@@ -1231,6 +1271,7 @@ function BookingModal({
   onClose,
   onTrack,
 }: {
+  currentUser: { id: string; fullName: string; email: string; phone?: string } | null;
   form: typeof initialForm;
   field: (name: keyof typeof initialForm, value: string) => void;
   estimate: number;
@@ -1310,6 +1351,15 @@ function BookingModal({
             <X className="size-5" />
           </button>
         </div>
+        {currentUser && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 bg-emerald-50/80 px-6 py-2.5 sm:px-8">
+            <span className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              I identifikuar: {currentUser.fullName} ({currentUser.email})
+            </span>
+            <span className="text-[11px] font-semibold text-emerald-700">Porosia lidhet automatikisht me llogarinë tuaj</span>
+          </div>
+        )}
         {booking ? (
           <div className="p-8 text-center sm:p-12">
             <span className="mx-auto grid size-16 place-items-center rounded-full bg-green-100 text-green-700">

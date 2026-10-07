@@ -15,6 +15,7 @@ import {
   type PermissionCode,
   type StaffProfile,
 } from '../types/profiles';
+import { hasPermission } from '../auth/permissions';
 import { throttleAuth } from '../security/auth-throttle';
 import {
   issueSession,
@@ -77,24 +78,27 @@ async function activeStaff(id: string): Promise<StaffProfile | null> {
       ? roleRecord.role_permissions
       : [];
   const knownPermissions = new Set<string>(permissionCodes);
-  const permissions = links.flatMap((link: unknown): PermissionCode[] => {
-    if (!link || typeof link !== 'object' || !('permissions' in link))
-      return [];
-    const permissionRelation = link.permissions;
-    const permission = Array.isArray(permissionRelation)
-      ? permissionRelation[0]
-      : permissionRelation;
-    if (
-      !permission ||
-      typeof permission !== 'object' ||
-      !('code' in permission)
-    )
-      return [];
-    return typeof permission.code === 'string' &&
-      knownPermissions.has(permission.code)
-      ? [permission.code as PermissionCode]
-      : [];
-  });
+  const permissions =
+    role === 'admin'
+      ? [...permissionCodes]
+      : links.flatMap((link: unknown): PermissionCode[] => {
+          if (!link || typeof link !== 'object' || !('permissions' in link))
+            return [];
+          const permissionRelation = link.permissions;
+          const permission = Array.isArray(permissionRelation)
+            ? permissionRelation[0]
+            : permissionRelation;
+          if (
+            !permission ||
+            typeof permission !== 'object' ||
+            !('code' in permission)
+          )
+            return [];
+          return typeof permission.code === 'string' &&
+            knownPermissions.has(permission.code)
+            ? [permission.code as PermissionCode]
+            : [];
+        });
   return {
     id: profile.id,
     fullName: profile.full_name,
@@ -235,7 +239,7 @@ export const accountService = {
     input: output<typeof staffAccountCreateSchema>,
     actor: StaffProfile,
   ) {
-    if (!actor.permissions.includes('staff.manage'))
+    if (!hasPermission(actor, 'staff.manage'))
       throw new ApiError('Vetëm administratori mund të krijojë staf.', 403);
     const email = staffEmail(input.login);
     const selectedRoleId = await roleId(input.role);
@@ -264,7 +268,7 @@ export const accountService = {
     input: output<typeof staffAccountUpdateSchema>,
     actor: StaffProfile,
   ) {
-    if (!actor.permissions.includes('staff.manage'))
+    if (!hasPermission(actor, 'staff.manage'))
       throw new ApiError('Vetëm administratori mund të ndryshojë stafin.', 403);
     if (id === actor.id && (!input.active || input.role !== 'admin'))
       throw new ApiError('Nuk mund të hiqni aksesin tuaj administrativ.', 400);
