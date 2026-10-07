@@ -10,6 +10,7 @@ import {
   Clock3,
   KeyRound,
   LogOut,
+  Mail,
   PackageCheck,
   RefreshCw,
   Search,
@@ -179,13 +180,12 @@ export default function AccountPage() {
 }
 
 function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<void>; initialError: string }) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'verify'>('login');
   const [form, setForm] = useState({ fullName: '', phone: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
-  const [verificationOpen, setVerificationOpen] = useState(false);
   const [notice, setNotice] = useState('');
 
   const activeError = error || initialError;
@@ -196,7 +196,7 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
     const search = window.location.search;
     if (hash.includes('access_token') || hash.includes('type=signup') || search.includes('confirmed=true')) {
       const timer = window.setTimeout(() => {
-        setNotice('Email-i juaj u konfirmua me sukses! Vendosni fjalëkalimin për të hyrë.');
+        setNotice('Email-i juaj u konfirmua me sukses! Vendosni fjalëkalimin për të hyrë në llogari.');
         setMode('login');
       }, 0);
       return () => window.clearTimeout(timer);
@@ -204,13 +204,29 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
   }, []);
 
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault(); setSaving(true); setError(''); setNotice('');
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+    setNotice('');
     try {
-      await apiRequest(mode === 'login' ? '/api/account/auth' : '/api/account/register', {
-        method: 'POST',
-        body: JSON.stringify({ ...form, acceptedTerms: mode === 'register' ? acceptedTerms : undefined }),
-      });
-      if (mode === 'register') {
+      if (mode === 'login') {
+        await apiRequest('/api/account/auth', {
+          method: 'POST',
+          body: JSON.stringify({ email: form.email, password: form.password }),
+        });
+        await onSuccess();
+      } else if (mode === 'register') {
+        await apiRequest('/api/account/register', {
+          method: 'POST',
+          body: JSON.stringify({ ...form, acceptedTerms }),
+        });
+        setMode('verify');
+        setNotice(`Kemi dërguar kodin OTP dhe linkun e konfirmimit në ${form.email}. Vendosni kodin më poshtë ose klikoni linkun në email.`);
+      } else if (mode === 'verify') {
+        await apiRequest('/api/account/verify', {
+          method: 'POST',
+          body: JSON.stringify({ email: form.email, token: verificationCode }),
+        });
         try {
           await apiRequest('/api/account/auth', {
             method: 'POST',
@@ -220,53 +236,207 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
           return;
         } catch {
           setMode('login');
-          setNotice('Llogaria u krijua me sukses! Tani mund të hyni me fjalëkalimin tuaj.');
+          setNotice('Email-i u verifikua me sukses! Tani mund të hyni me fjalëkalimin tuaj.');
+          setVerificationCode('');
         }
-      } else {
-        await onSuccess();
       }
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : 'Veprimi dështoi.');
-    } finally { setSaving(false); }
+      const msg = submitError instanceof Error ? submitError.message : 'Veprimi dështoi.';
+      setError(msg);
+    } finally {
+      setSaving(false);
+    }
   }
 
-  async function verifyEmail(resend: boolean) {
-    setSaving(true); setError(''); setNotice('');
+  async function resendVerification() {
+    if (!form.email) {
+      setError('Ju lutem vendosni email-in tuaj.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    setNotice('');
     try {
-      await apiRequest(resend ? '/api/account/resend' : '/api/account/verify', {
-        method: 'POST', body: JSON.stringify({ email: form.email, token: verificationCode }),
+      await apiRequest('/api/account/resend', {
+        method: 'POST',
+        body: JSON.stringify({ email: form.email }),
       });
-      setNotice(resend ? 'Nëse llogaria pret verifikim, kontrolloni email-in.' : 'Email-i u verifikua. Tani hyni me fjalëkalimin tuaj.');
-      if (!resend) { setVerificationOpen(false); setVerificationCode(''); setMode('login'); }
-    } catch (verifyError) {
-      setError(verifyError instanceof Error ? verifyError.message : 'Verifikimi dështoi.');
-    } finally { setSaving(false); }
+      setNotice('Email-i me kodin e verifikimit dhe linkun u dërgua. Kontrolloni dhe dosjen Spam.');
+    } catch (resendError) {
+      setError(resendError instanceof Error ? resendError.message : 'Ridërgimi dështoi.');
+    } finally {
+      setSaving(false);
+    }
   }
-
 
   return (
     <main className="brand-night grid min-h-screen lg:grid-cols-[1.1fr_.9fr]">
       <section className="brand-night-pattern hidden flex-col justify-between p-12 text-white lg:flex">
-        <Link href="/" aria-label="Dërgo24, faqja kryesore"><Image src="/dergo24-logo-dark.svg" alt="Dërgo24" width={210} height={48} className="h-11 w-auto" /></Link>
-        <div className="max-w-xl"><p className="text-sm font-black uppercase tracking-[0.2em] text-orange-400">Llogaria Dergo24</p><h1 className="mt-5 text-6xl font-black leading-[1.02] tracking-tight">Pakoja jote.<br />Gjithmonë pranë.</h1><p className="mt-6 text-lg leading-8 text-slate-300">Rezervo dërgesa, shiko historikun dhe ndiq çdo ndryshim statusi nga një vend.</p></div>
+        <Link href="/" aria-label="Dërgo24, faqja kryesore">
+          <Image src="/dergo24-logo-dark.svg" alt="Dërgo24" width={210} height={48} className="h-11 w-auto" />
+        </Link>
+        <div className="max-w-xl">
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-400">Llogaria Dergo24</p>
+          <h1 className="mt-5 text-6xl font-black leading-[1.02] tracking-tight">Pakoja jote.<br />Gjithmonë pranë.</h1>
+          <p className="mt-6 text-lg leading-8 text-slate-300">Rezervo dërgesa, shiko historikun dhe ndiq çdo ndryshim statusi nga një vend.</p>
+        </div>
         <p className="text-sm text-slate-500">Transport në çdo qytet të Shqipërisë</p>
       </section>
       <section className="premium-auth-surface grid min-h-screen place-items-center px-5 py-10 lg:rounded-l-[3rem]">
         <form onSubmit={submit} className="premium-auth-card w-full max-w-md">
-          <Link href="/" aria-label="Dërgo24, faqja kryesore" className="mb-10 block lg:hidden"><Image src="/dergo24-logo-light.svg" alt="Dërgo24" width={210} height={48} className="mx-auto h-11 w-auto" /></Link>
-          <div className="mb-7 flex rounded-xl bg-slate-100 p-1"><button type="button" onClick={() => { setMode('login'); setError(''); }} className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-black ${mode === 'login' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Hyr</button><button type="button" onClick={() => { setMode('register'); setError(''); }} className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-black ${mode === 'register' ? 'bg-white shadow-sm' : 'text-slate-500'}`}>Krijo llogari</button></div>
-          <h2 className="text-3xl font-black">{mode === 'login' ? 'Mirë se u ktheve' : 'Krijo llogarinë tënde'}</h2>
-          <p className="mt-2 text-slate-500">{mode === 'login' ? 'Hyni për të parë dërgesat tuaja.' : 'Rezervimet e ardhshme lidhen automatikisht me ju.'}</p>
-          {mode === 'register' && <><Field id="customer-name" label="Emri i plotë"><input id="customer-name" value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} className="form-control" required /></Field><Field id="customer-phone" label="Telefoni"><input id="customer-phone" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="form-control" placeholder="+355 69..." required /></Field></>}
-          <Field id="customer-email" label="Email"><input id="customer-email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="form-control" autoComplete="email" required /></Field>
-          <Field id="customer-password" label="Fjalëkalimi"><input id="customer-password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="form-control" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required /></Field>
-          {mode === 'register' && <label className="mt-5 flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 size-4 accent-orange-500" required /><span>Pranoj <Link href="/terms" target="_blank" className="font-black text-orange-600 underline">kushtet</Link> dhe <Link href="/privacy" target="_blank" className="font-black text-orange-600 underline">privatësinë</Link>.</span></label>}
-          {activeError && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{activeError}</p>}
-          {notice && <output className="mt-4 block rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">{notice}</output>}
-          <button type="button" onClick={() => setVerificationOpen(!verificationOpen)} className="mt-4 text-sm font-bold text-orange-700">Verifiko email-in / Ridërgo konfirmimin</button>
-          {verificationOpen && <div className="mt-3 rounded-xl bg-slate-50 p-4"><label htmlFor="email-verification-code" className="text-sm font-bold">Kodi nga email-i (nëse shfaqet)</label><input id="email-verification-code" value={verificationCode} onChange={(event) => setVerificationCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={10} className="form-control mt-2" /><div className="mt-3 flex gap-4"><button type="button" disabled={saving || !form.email || !/^\d{6,10}$/.test(verificationCode)} onClick={() => void verifyEmail(false)} className="font-bold text-orange-700 disabled:opacity-50">Verifiko</button><button type="button" disabled={saving || !form.email} onClick={() => void verifyEmail(true)} className="font-bold text-slate-600 disabled:opacity-50">Ridërgo email-in</button></div></div>}
-          <button disabled={saving || (mode === 'register' && !acceptedTerms)} className="premium-button mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-black text-white disabled:opacity-60">{saving ? <RefreshCw className="size-5 animate-spin" /> : <>{mode === 'login' ? 'Hyr në llogari' : 'Krijo llogari'} <ArrowRight className="size-5" /></>}</button>
-          <Link href="/" className="mt-6 block text-center text-sm font-bold text-slate-500">Kthehu te faqja kryesore</Link>
+          <Link href="/" aria-label="Dërgo24, faqja kryesore" className="mb-10 block lg:hidden">
+            <Image src="/dergo24-logo-light.svg" alt="Dërgo24" width={210} height={48} className="mx-auto h-11 w-auto" />
+          </Link>
+
+          {mode !== 'verify' && (
+            <div className="mb-7 flex rounded-xl bg-slate-100 p-1">
+              <button
+                type="button"
+                onClick={() => { setMode('login'); setError(''); setNotice(''); }}
+                className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-black transition ${mode === 'login' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+              >
+                Hyr
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('register'); setError(''); setNotice(''); }}
+                className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-black transition ${mode === 'register' ? 'bg-white shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+              >
+                Krijo llogari
+              </button>
+            </div>
+          )}
+
+          {mode === 'login' && (
+            <>
+              <h2 className="text-3xl font-black">Mirë se u ktheve</h2>
+              <p className="mt-2 text-slate-500">Hyni me email dhe fjalëkalim për të parë dërgesat tuaja.</p>
+
+              <Field id="customer-email" label="Email">
+                <input id="customer-email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="form-control" autoComplete="email" required />
+              </Field>
+              <Field id="customer-password" label="Fjalëkalimi">
+                <input id="customer-password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="form-control" autoComplete="current-password" minLength={8} required />
+              </Field>
+
+              {activeError && (
+                <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">
+                  <p>{activeError}</p>
+                  {activeError.toLowerCase().includes('verifikuar') && (
+                    <button
+                      type="button"
+                      onClick={() => { setMode('verify'); setError(''); }}
+                      className="mt-2 block text-xs font-bold text-red-800 underline hover:text-red-950"
+                    >
+                      Kliko këtu për të vendosur kodin OTP të verifikimit →
+                    </button>
+                  )}
+                </div>
+              )}
+              {notice && <output className="mt-4 block rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{notice}</output>}
+
+              <button disabled={saving} className="premium-button mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-black text-white disabled:opacity-60">
+                {saving ? <RefreshCw className="size-5 animate-spin" /> : <>Hyr në llogari <ArrowRight className="size-5" /></>}
+              </button>
+            </>
+          )}
+
+          {mode === 'register' && (
+            <>
+              <h2 className="text-3xl font-black">Krijo llogarinë tënde</h2>
+              <p className="mt-2 text-slate-500">Pas aplikimit do të merrni kodin OTP dhe linkun e konfirmimit në email.</p>
+
+              <Field id="customer-name" label="Emri i plotë">
+                <input id="customer-name" value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} className="form-control" required />
+              </Field>
+              <Field id="customer-phone" label="Telefoni">
+                <input id="customer-phone" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} className="form-control" placeholder="+355 69..." required />
+              </Field>
+              <Field id="customer-email" label="Email">
+                <input id="customer-email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="form-control" autoComplete="email" required />
+              </Field>
+              <Field id="customer-password" label="Fjalëkalimi">
+                <input id="customer-password" type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="form-control" autoComplete="new-password" minLength={8} required />
+              </Field>
+
+              <label className="mt-5 flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                <input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-1 size-4 accent-orange-500" required />
+                <span>Pranoj <Link href="/terms" target="_blank" className="font-black text-orange-600 underline">kushtet</Link> dhe <Link href="/privacy" target="_blank" className="font-black text-orange-600 underline">privatësinë</Link>.</span>
+              </label>
+
+              {activeError && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{activeError}</p>}
+              {notice && <output className="mt-4 block rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">{notice}</output>}
+
+              <button disabled={saving || !acceptedTerms} className="premium-button mt-6 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-black text-white disabled:opacity-60">
+                {saving ? <RefreshCw className="size-5 animate-spin" /> : <>Krijo llogari <ArrowRight className="size-5" /></>}
+              </button>
+            </>
+          )}
+
+          {mode === 'verify' && (
+            <>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-black uppercase tracking-wider text-orange-700">
+                <Mail className="size-3.5" /> Verifikimi i Email-it
+              </div>
+              <h2 className="text-3xl font-black">Verifiko email-in tënd</h2>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Kemi dërguar kodin e verifikimit (OTP) dhe linkun e konfirmimit në: <strong className="text-slate-900">{form.email}</strong>
+              </p>
+
+              <Field id="email-verification-code" label="Kodi OTP nga email-i (6–10 shifra)">
+                <input
+                  id="email-verification-code"
+                  value={verificationCode}
+                  onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, ''))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={10}
+                  className="form-control text-center text-xl font-mono font-bold tracking-widest"
+                  placeholder="123456"
+                  required
+                />
+              </Field>
+
+              <p className="mt-2 text-xs text-slate-500">
+                Vendosni kodin më lart, ose klikoni direkt linkun në email. Kontrolloni dhe dosjen Spam nëse nuk e shihni.
+              </p>
+
+              {activeError && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{activeError}</p>}
+              {notice && <output className="mt-4 block rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">{notice}</output>}
+
+              <div className="mt-6 flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={saving || !/^\d{6,10}$/.test(verificationCode)}
+                  className="premium-button flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-black text-white disabled:opacity-50"
+                >
+                  {saving ? <RefreshCw className="size-5 animate-spin" /> : <>Verifiko & Hyr <CheckCircle2 className="size-5" /></>}
+                </button>
+
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={resendVerification}
+                    className="text-xs font-bold text-orange-600 hover:text-orange-800 disabled:opacity-50"
+                  >
+                    Ridërgo kodin në email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMode('login'); setError(''); setNotice(''); }}
+                    className="text-xs font-bold text-slate-500 hover:text-slate-800"
+                  >
+                    Kthehu te Hyrja
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          <Link href="/" className="mt-8 block text-center text-sm font-bold text-slate-500 hover:text-slate-800">
+            Kthehu te faqja kryesore
+          </Link>
         </form>
       </section>
     </main>

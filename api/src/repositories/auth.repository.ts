@@ -19,7 +19,7 @@ export const authRepository = {
     return getSupabaseAdmin().auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
+      email_confirm: false,
       user_metadata: { full_name: fullName },
     });
   },
@@ -30,15 +30,23 @@ export const authRepository = {
   },
   async sendConfirmation(email: string) {
     try {
-      const res = await getSupabaseAdmin().auth.resend({ type: 'signup', email });
+      const origin = process.env.APP_ORIGIN || 'https://dergo24.com';
+      const res = await getSupabaseAdmin().auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${origin}/account?confirmed=true`,
+        },
+      });
       if (!res.error) return res;
     } catch {}
     return { data: { user: null, session: null }, error: null };
   },
   async verifyEmail(email: string, token: string) {
-    const res = await getSupabaseAdmin().auth.verifyOtp({ email, token, type: 'signup' });
+    const cleanToken = token.trim();
+    const res = await getSupabaseAdmin().auth.verifyOtp({ email, token: cleanToken, type: 'signup' });
     if (!res.error && res.data.user) return res;
-    return getSupabaseAdmin().auth.verifyOtp({ email, token, type: 'email' });
+    return getSupabaseAdmin().auth.verifyOtp({ email, token: cleanToken, type: 'email' });
   },
   deleteUser(id: string) {
     return getSupabaseAdmin().auth.admin.deleteUser(id);

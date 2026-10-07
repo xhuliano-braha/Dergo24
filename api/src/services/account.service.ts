@@ -144,8 +144,16 @@ export const accountService = {
       input.email,
       input.password,
     );
+    if (error) {
+      if (error.message?.toLowerCase().includes('email not confirmed')) {
+        throw new ApiError(
+          'Email-i juaj nuk është verifikuar ende. Ju lutem kontrolloni email-in tuaj për verifikim.',
+          403,
+        );
+      }
+      throw new ApiError('Email ose fjalëkalim i pasaktë.', 401);
+    }
     if (
-      error ||
       !data.session ||
       !data.user ||
       !snapshot ||
@@ -154,7 +162,10 @@ export const accountService = {
       throw new ApiError('Email ose fjalëkalim i pasaktë.', 401);
 
     if (!data.user.email_confirmed_at) {
-      await authRepository.confirmUser(data.user.id);
+      throw new ApiError(
+        'Email-i juaj nuk është verifikuar ende. Ju lutem kontrolloni email-in tuaj për verifikim.',
+        403,
+      );
     }
 
     const customer = await activeCustomer(data.user.id);
@@ -214,8 +225,14 @@ export const accountService = {
       await rollbackUser(created.user.id);
       throw new ApiError('Llogaria nuk mund të krijohej.', 503);
     }
-    void authRepository.sendConfirmation(email);
-    return { verificationRequired: false, success: true };
+    await authRepository.sendConfirmation(email);
+    return {
+      verificationRequired: true,
+      success: true,
+      email,
+      message:
+        'Kemi dërguar kodin e verifikimit dhe linkun e konfirmimit në email-in tuaj.',
+    };
   },
   async resendConfirmation(email: string, client: string) {
     await throttleAuth(`resend:${client}:${email}`, 3, 3600);
