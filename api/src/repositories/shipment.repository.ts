@@ -58,4 +58,13 @@ export const shipmentRepository = {
       p_input: input,
     });
   },
+
+  async deleteShipment(shipmentId: string) {
+    const supabase = getSupabaseAdmin();
+    await supabase.from('claims').delete().eq('shipment_id', shipmentId);
+    await supabase.from('delivery_ratings').delete().eq('shipment_id', shipmentId);
+    await supabase.from('delivery_proofs').delete().eq('shipment_id', shipmentId);
+    await supabase.from('tracking_events').delete().eq('shipment_id', shipmentId);
+    return supabase.from('shipments').delete().eq('id', shipmentId);
+  },
 };

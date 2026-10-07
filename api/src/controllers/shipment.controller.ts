@@ -64,3 +64,35 @@ export async function updateShipmentController(
     return controllerErrorResponse(error, 'Shipment update failed');
   }
 }
+
+export async function createStaffShipmentController(request: NextRequest) {
+  try {
+    const staff = await getAuthenticatedStaff(request);
+    if (!staff) return unauthorizedResponse();
+    const raw = (await request.json()) as Record<string, unknown>;
+    const driverId = typeof raw.driverId === 'string' ? raw.driverId : null;
+    const status = typeof raw.status === 'string' ? raw.status : undefined;
+    const validated = shipmentSchema.parse(raw);
+    const result = await shipmentService.createStaff(
+      { ...validated, driverId, status },
+      staff,
+    );
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
+    return controllerErrorResponse(error, 'Staff shipment creation failed');
+  }
+}
+
+export async function deleteShipmentController(
+  request: NextRequest,
+  context: IdRouteContext,
+) {
+  try {
+    const staff = await getAuthenticatedStaff(request);
+    if (!staff) return unauthorizedResponse();
+    const id = await parseId(context);
+    return NextResponse.json(await shipmentService.delete(id, staff));
+  } catch (error) {
+    return controllerErrorResponse(error, 'Shipment delete failed');
+  }
+}

@@ -10,7 +10,7 @@ import type { StaffProfile } from '../types/profiles';
 import { shipmentUpdateSchema } from '../lib/staff-schemas';
 import { shipmentRepository } from '../repositories/shipment.repository';
 import { atomicWriteError } from '../errors/atomic-write-error';
-import { requirePermission } from '../auth/permissions';
+import { hasPermission, requirePermission } from '../auth/permissions';
 
 type ShipmentUpdateInput = output<typeof shipmentUpdateSchema>;
 
@@ -217,5 +217,59 @@ export const shipmentService = {
       throw atomicWriteError(error, 'Dërgesa nuk mund të përditësohej.');
 
     return { success: true };
+  },
+
+  async createStaff(
+    input: ShipmentInput & { driverId?: string | null; status?: string },
+    staff: StaffProfile,
+  ) {
+    if (
+      staff.role !== 'admin' &&
+      !hasPermission(staff, 'shipments.import') &&
+      !hasPermission(staff, 'shipments.update')
+    ) {
+      throw new ApiError('Nuk keni leje për të krijuar dërgesë.', 403);
+    }
+    const createdAt = new Date().toISOString();
+    const prepared = prepareShipment(input, null, createdAt);
+    const shipmentRecord: Record<string, unknown> = {
+      ...prepared.shipment,
+      driver_id: input.driverId ?? null,
+      status: input.status ?? prepared.shipment.status,
+    };
+    const event = {
+      id: crypto.randomUUID(),
+      shipment_id: prepared.shipment.id,
+      status: (shipmentRecord.status as string) || prepared.shipment.status,
+      location: input.pickupCity,
+      details: 'Porosia u regjistrua nga paneli i administratorit.',
+      created_by: staff.id,
+      created_at: createdAt,
+    };
+    const { error } = await shipmentRepository.bookAtomic(
+      [shipmentRecord],
+      [event],
+      staff.id,
+    );
+    if (error) throw atomicWriteError(error, 'Dërgesa nuk mund të ruhej.');
+
+    return {
+      success: true,
+      trackingCode: prepared.trackingCode,
+      price: prepared.price,
+      status: prepared.shipment.status,
+      id: prepared.shipment.id,
+    };
+  },
+
+  async delete(shipmentId: string, staff: StaffProfile) {
+    if (staff.role !== 'admin' && !hasPermission(staff, 'shipments.update')) {
+      throw new ApiError('Vetëm administratori mund të fshijë dërgesa.', 403);
+    }
+    const { error } = await shipmentRepository.deleteShipment(shipmentId);
+    if (error) {
+      throw new ApiError('Dërgesa nuk mund të fshihej: ' + error.message, 500);
+    }
+    return { success: true, message: 'Dërgesa u fshi me sukses.' };
   },
 };

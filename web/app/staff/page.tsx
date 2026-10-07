@@ -25,6 +25,7 @@ import {
   MessageCircle,
   PenLine,
   PackageCheck,
+  Plus,
   Printer,
   RefreshCw,
   Search,
@@ -33,6 +34,7 @@ import {
   ShieldCheck,
   Star,
   Truck,
+  Trash2,
   Upload,
   UserPlus,
   Users,
@@ -447,9 +449,12 @@ export default function StaffPage() {
           {tab === 'shipments' && (
             <ShipmentsPanel
               shipments={data.shipments}
+              drivers={data.drivers}
+              staff={data.staff}
               search={search}
               setSearch={setSearch}
               onSelect={setSelectedShipment}
+              onUpdated={loadDashboard}
             />
           )}
           {tab === 'quotes' && (
@@ -742,15 +747,22 @@ function PanelHeader({
 
 function ShipmentsPanel({
   shipments,
+  drivers,
+  staff,
   search,
   setSearch,
   onSelect,
+  onUpdated,
 }: {
   shipments: Shipment[];
+  drivers: Driver[];
+  staff: Staff;
   search: string;
   setSearch: (value: string) => void;
   onSelect: (shipment: Shipment) => void;
+  onUpdated: () => Promise<void>;
 }) {
+  const [createOpen, setCreateOpen] = useState(false);
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
     if (!query) return shipments;
@@ -776,16 +788,28 @@ function ShipmentsPanel({
         eyebrow="Fluksi i dërgesave"
         title={`${filtered.length} dërgesa`}
       >
-        <label className="flex w-full items-center gap-2 rounded-xl bg-slate-100 px-4 py-3 md:w-80">
-          <Search className="size-4 text-slate-400" />
-          <input
-            aria-label="Kërko dërgesa"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-            placeholder="Kod, ID, telefon, adresë..."
-          />
-        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          {(staff.role === 'admin' ||
+            staff.permissions.includes('shipments.import') ||
+            staff.permissions.includes('shipments.update')) && (
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-orange-600"
+            >
+              <Plus className="size-4" /> Shto dërgesë
+            </button>
+          )}
+          <label className="flex w-full items-center gap-2 rounded-xl bg-slate-100 px-4 py-3 sm:w-80">
+            <Search className="size-4 text-slate-400" />
+            <input
+              aria-label="Kërko dërgesa"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+              placeholder="Kod, ID, telefon, adresë..."
+            />
+          </label>
+        </div>
       </PanelHeader>
       <div className="space-y-3">
         {filtered.map((shipment) => (
@@ -847,7 +871,422 @@ function ShipmentsPanel({
         ))}
         {!filtered.length && <EmptyState text="Nuk u gjet asnjë dërgesë." />}
       </div>
+
+      {createOpen && (
+        <CreateShipmentDialog
+          drivers={drivers}
+          onClose={() => setCreateOpen(false)}
+          onCreated={onUpdated}
+        />
+      )}
     </article>
+  );
+}
+
+const ALBANIAN_CITIES = [
+  'Tiranë',
+  'Durrës',
+  'Vlorë',
+  'Shkodër',
+  'Fier',
+  'Korçë',
+  'Elbasan',
+  'Berat',
+  'Lushnjë',
+  'Pogradec',
+  'Sarandë',
+  'Kavajë',
+  'Gjirokastër',
+  'Lezhë',
+  'Kukës',
+  'Peshkopi',
+  'Burrel',
+  'Krujë',
+  'Tepelenë',
+  'Gramsh',
+  'Përmet',
+];
+
+function calculateLivePrice(
+  weight: number,
+  service: 'standard' | 'express',
+  pickupCity: string,
+  deliveryCity: string,
+) {
+  const isLocal =
+    pickupCity.toLowerCase().includes('tiran') &&
+    deliveryCity.toLowerCase().includes('tiran');
+  const base = isLocal ? 200 : 300;
+  const extraWeight = Math.max(0, Math.ceil(weight) - 2) * 50;
+  const expressSurcharge = service === 'express' ? 100 : 0;
+  return base + extraWeight + expressSurcharge;
+}
+
+function CreateShipmentDialog({
+  drivers,
+  onClose,
+  onCreated,
+}: {
+  drivers: Driver[];
+  onClose: () => void;
+  onCreated: () => Promise<void>;
+}) {
+  const [senderName, setSenderName] = useState('');
+  const [senderPhone, setSenderPhone] = useState('');
+  const [pickupCity, setPickupCity] = useState('Tiranë');
+  const [recipientName, setRecipientName] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+  const [deliveryCity, setDeliveryCity] = useState('Tiranë');
+  const [address, setAddress] = useState('');
+  const [packageType, setPackageType] = useState<
+    'Dokumente' | 'Pako' | 'E brishtë' | 'Tjetër'
+  >('Pako');
+  const [weight, setWeight] = useState(1);
+  const [service, setService] = useState<'standard' | 'express'>('standard');
+  const [codAmount, setCodAmount] = useState(0);
+  const [driverId, setDriverId] = useState('');
+  const [pickupDate, setPickupDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [deliveryWindow, setDeliveryWindow] = useState<
+    'anytime' | '09:00-13:00' | '13:00-17:00' | '17:00-20:00'
+  >('anytime');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const livePrice = calculateLivePrice(weight, service, pickupCity, deliveryCity);
+
+  async function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      await apiRequest('/api/staff/shipments', {
+        method: 'POST',
+        body: JSON.stringify({
+          senderName: senderName.trim(),
+          senderPhone: senderPhone.trim(),
+          pickupCity: pickupCity.trim(),
+          recipientName: recipientName.trim(),
+          recipientPhone: recipientPhone.trim(),
+          deliveryCity: deliveryCity.trim(),
+          address: address.trim(),
+          packageType,
+          weight: Number(weight) || 1,
+          service,
+          codAmount: Number(codAmount) || 0,
+          pickupDate,
+          deliveryWindow,
+          deliveryMethod: 'home',
+          driverId: driverId || null,
+        }),
+      });
+      onClose();
+      await onCreated();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Krijimi i dërgesës dështoi.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-end bg-[#071b33]/70 p-0 backdrop-blur-sm md:place-items-center md:p-5"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <dialog
+        open
+        aria-labelledby="create-shipment-dialog-title"
+        className="relative m-0 max-h-[94vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 text-[#10233d] md:m-auto md:max-w-2xl md:rounded-3xl md:p-7"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-500">
+              Operacionet
+            </p>
+            <h2
+              id="create-shipment-dialog-title"
+              className="mt-1 text-2xl font-black"
+            >
+              Krijo Dërgesë të Re
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="grid size-10 place-items-center rounded-xl bg-slate-100 hover:bg-slate-200"
+            aria-label="Mbyll"
+          >
+            <X className="size-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <p className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">
+              Të dhënat e Dërguesit
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="Emri i Dërguesit">
+                <input
+                  required
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  placeholder="p.sh. Albana Hoxha"
+                  className="form-control"
+                />
+              </FormField>
+              <FormField label="Telefoni i Dërguesit">
+                <input
+                  required
+                  value={senderPhone}
+                  onChange={(e) => setSenderPhone(e.target.value)}
+                  placeholder="p.sh. +355 69 123 4567"
+                  className="form-control"
+                />
+              </FormField>
+            </div>
+            <div className="mt-3">
+              <FormField label="Qyteti i Marrjes (Nisja)">
+                <select
+                  value={pickupCity}
+                  onChange={(e) => setPickupCity(e.target.value)}
+                  className="form-control"
+                >
+                  {ALBANIAN_CITIES.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <p className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">
+              Të dhënat e Marrësit
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="Emri i Marrësit">
+                <input
+                  required
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  placeholder="p.sh. Ilir Deda"
+                  className="form-control"
+                />
+              </FormField>
+              <FormField label="Telefoni i Marrësit">
+                <input
+                  required
+                  value={recipientPhone}
+                  onChange={(e) => setRecipientPhone(e.target.value)}
+                  placeholder="p.sh. +355 68 987 6543"
+                  className="form-control"
+                />
+              </FormField>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <FormField label="Qyteti i Dorëzimit">
+                <select
+                  value={deliveryCity}
+                  onChange={(e) => setDeliveryCity(e.target.value)}
+                  className="form-control"
+                >
+                  {ALBANIAN_CITIES.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Adresa e Detajuar">
+                <input
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Rruga, Pallati, Kati..."
+                  className="form-control"
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+            <p className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">
+              Detajet e Pakos & Pagesa
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <FormField label="Lloji i Pakos">
+                <select
+                  value={packageType}
+                  onChange={(e) =>
+                    setPackageType(
+                      e.target.value as
+                        | 'Dokumente'
+                        | 'Pako'
+                        | 'E brishtë'
+                        | 'Tjetër',
+                    )
+                  }
+                  className="form-control"
+                >
+                  <option value="Pako">Pako</option>
+                  <option value="Dokumente">Dokumente</option>
+                  <option value="E brishtë">E brishtë</option>
+                  <option value="Tjetër">Tjetër</option>
+                </select>
+              </FormField>
+              <FormField label="Pesha (kg)">
+                <input
+                  type="number"
+                  min="0.1"
+                  max="100"
+                  step="0.1"
+                  required
+                  value={weight}
+                  onChange={(e) =>
+                    setWeight(parseFloat(e.target.value) || 1)
+                  }
+                  className="form-control"
+                />
+              </FormField>
+              <FormField label="Shërbimi">
+                <select
+                  value={service}
+                  onChange={(e) =>
+                    setService(e.target.value as 'standard' | 'express')
+                  }
+                  className="form-control"
+                >
+                  <option value="standard">Standard</option>
+                  <option value="express">Express (+100 Lekë)</option>
+                </select>
+              </FormField>
+            </div>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <FormField label="Pagesë në dorëzim (COD Lekë)">
+                <input
+                  type="number"
+                  min="0"
+                  max="500000"
+                  value={codAmount}
+                  onChange={(e) =>
+                    setCodAmount(parseInt(e.target.value, 10) || 0)
+                  }
+                  placeholder="0 nëse s'ka pagesë"
+                  className="form-control"
+                />
+              </FormField>
+              <FormField label="Cakto Korrier (Opsionale)">
+                <select
+                  value={driverId}
+                  onChange={(e) => setDriverId(e.target.value)}
+                  className="form-control"
+                >
+                  <option value="">Pa korrier (caktohet më vonë)</option>
+                  {drivers
+                    .filter((d) => d.active)
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.full_name} ({d.phone})
+                      </option>
+                    ))}
+                </select>
+              </FormField>
+            </div>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <FormField label="Data e Marrjes">
+                <input
+                  type="date"
+                  required
+                  value={pickupDate}
+                  onChange={(e) => setPickupDate(e.target.value)}
+                  className="form-control"
+                />
+              </FormField>
+              <FormField label="Orari i Marrjes">
+                <select
+                  value={deliveryWindow}
+                  onChange={(e) =>
+                    setDeliveryWindow(
+                      e.target.value as
+                        | 'anytime'
+                        | '09:00-13:00'
+                        | '13:00-17:00'
+                        | '17:00-20:00',
+                    )
+                  }
+                  className="form-control"
+                >
+                  <option value="anytime">Gjatë ditës (Pa orar fiks)</option>
+                  <option value="09:00-13:00">Paradite (09:00 - 13:00)</option>
+                  <option value="13:00-17:00">Pasdite (13:00 - 17:00)</option>
+                  <option value="17:00-20:00">Mbrëmje (17:00 - 20:00)</option>
+                </select>
+              </FormField>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-2xl border border-orange-200 bg-orange-50 p-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-orange-700">
+                Tarifa e Llogaritur e Dërgesës
+              </p>
+              <p className="text-xs text-orange-900/70">
+                {pickupCity.toLowerCase().includes('tiran') &&
+                deliveryCity.toLowerCase().includes('tiran')
+                  ? 'Tarifë lokale brenda Tiranës (200 Lekë)'
+                  : 'Tarifë ndërqytetase (300 Lekë)'}
+                {weight > 2
+                  ? ` + ${Math.ceil(weight - 2) * 50}L peshë shtesë`
+                  : ''}
+                {service === 'express' ? ' + 100L Express' : ''}
+              </p>
+            </div>
+            <p className="font-mono text-2xl font-black text-orange-600">
+              {livePrice} <span className="text-sm font-bold">Lekë</span>
+            </p>
+          </div>
+
+          {error && (
+            <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">
+              {error}
+            </p>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
+            >
+              Anulo
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex items-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-black text-white hover:bg-orange-600 disabled:opacity-60"
+            >
+              {saving ? (
+                <RefreshCw className="size-4 animate-spin" />
+              ) : (
+                <Plus className="size-4" />
+              )}
+              Krijo Dërgesën
+            </button>
+          </div>
+        </form>
+      </dialog>
+    </div>
   );
 }
 
@@ -880,6 +1319,8 @@ function ShipmentDialog({
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
   async function save(event: SyntheticEvent<HTMLFormElement>) {
@@ -1143,6 +1584,69 @@ function ShipmentDialog({
           >
             <MessageCircle className="size-5" /> Njofto marrësin në WhatsApp
           </a>
+
+          {staff.role === 'admin' && (
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3.5 font-black text-red-600 transition hover:bg-red-100"
+                >
+                  <Trash2 className="size-5" /> Fshi këtë dërgesë
+                </button>
+              ) : (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center">
+                  <p className="text-sm font-black text-red-900">
+                    A jeni i sigurt që doni të fshini dërgesën {shipment.tracking_code}?
+                  </p>
+                  <p className="mt-1 text-xs text-red-700">
+                    Ky veprim do të fshijë dërgesën përgjithmonë nga databaza.
+                  </p>
+                  <div className="mt-3 flex justify-center gap-3">
+                    <button
+                      type="button"
+                      disabled={deleting}
+                      onClick={async () => {
+                        setDeleting(true);
+                        setError('');
+                        try {
+                          await apiRequest(`/api/staff/shipments/${shipment.id}`, {
+                            method: 'DELETE',
+                          });
+                          onClose();
+                          await onUpdated();
+                        } catch (delError) {
+                          setError(
+                            delError instanceof Error
+                              ? delError.message
+                              : 'Fshirja e dërgesës dështoi.',
+                          );
+                          setDeleting(false);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-black text-white transition hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {deleting ? (
+                        <RefreshCw className="size-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-3.5" />
+                      )}
+                      Po, fshije dërgesën
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deleting}
+                      onClick={() => setConfirmDelete(false)}
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Anulo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </form>
       </dialog>
     </div>
