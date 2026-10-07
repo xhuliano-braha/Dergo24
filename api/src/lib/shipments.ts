@@ -2,12 +2,12 @@ import { z } from 'zod';
 
 export const shipmentSchema = z.object({
   senderName: z.string().trim().min(2).max(80),
-  senderPhone: z.string().trim().regex(/^\+?[0-9 ]{8,16}$/),
+  senderPhone: z.string().trim().regex(/^\+?[0-9 \-\.]{8,20}$/, 'Numër telefoni i pasaktë.'),
   recipientName: z.string().trim().min(2).max(80),
-  recipientPhone: z.string().trim().regex(/^\+?[0-9 ]{8,16}$/),
+  recipientPhone: z.string().trim().regex(/^\+?[0-9 \-\.]{8,20}$/, 'Numër telefoni i pasaktë.'),
   pickupCity: z.string().trim().min(2).max(60),
   deliveryCity: z.string().trim().min(2).max(60),
-  address: z.string().trim().min(5).max(180),
+  address: z.string().trim().min(3).max(180),
   packageType: z.enum(['Dokumente', 'Pako', 'E brishtë', 'Tjetër']),
   weight: z.coerce.number().positive().max(100),
   service: z.enum(['standard', 'express']),
@@ -15,8 +15,11 @@ export const shipmentSchema = z.object({
   pickupDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   deliveryWindow: z.enum(['anytime', '09:00-13:00', '13:00-17:00', '17:00-20:00']),
   deliveryMethod: z.enum(['home', 'pickup_point']),
-  pickupPointId: z.uuid().nullable(),
-}).refine((input) => input.pickupDate >= new Date().toISOString().slice(0, 10), {
+  pickupPointId: z.string().uuid().nullable().optional().or(z.literal('')).transform((v) => v || null),
+}).refine((input) => {
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  return input.pickupDate >= yesterday;
+}, {
   message: 'Data e marrjes nuk mund të jetë në të kaluarën.',
   path: ['pickupDate'],
 });

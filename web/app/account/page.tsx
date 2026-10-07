@@ -178,6 +178,16 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [notice, setNotice] = useState('');
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    const search = window.location.search;
+    if (hash.includes('access_token') || hash.includes('type=signup') || search.includes('confirmed=true')) {
+      setNotice('Email-i juaj u konfirmua me sukses! Vendosni fjalëkalimin për të hyrë.');
+      setMode('login');
+    }
+  }, []);
+
   async function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError(''); setNotice('');
     try {
@@ -186,9 +196,17 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
         body: JSON.stringify({ ...form, acceptedTerms: mode === 'register' ? acceptedTerms : undefined }),
       });
       if (mode === 'register') {
-        setVerificationOpen(true);
-        setMode('login');
-        setNotice('Kontrolloni email-in. Hapni lidhjen e konfirmimit ose vendosni kodin më poshtë, pastaj hyni.');
+        try {
+          await apiRequest('/api/account/auth', {
+            method: 'POST',
+            body: JSON.stringify({ email: form.email, password: form.password }),
+          });
+          await onSuccess();
+          return;
+        } catch {
+          setMode('login');
+          setNotice('Llogaria u krijua me sukses! Tani mund të hyni me fjalëkalimin tuaj.');
+        }
       } else {
         await onSuccess();
       }
@@ -209,6 +227,7 @@ function CustomerAccess({ onSuccess, initialError }: { onSuccess: () => Promise<
       setError(verifyError instanceof Error ? verifyError.message : 'Verifikimi dështoi.');
     } finally { setSaving(false); }
   }
+
 
   return (
     <main className="brand-night grid min-h-screen lg:grid-cols-[1.1fr_.9fr]">

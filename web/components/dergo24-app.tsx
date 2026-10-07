@@ -274,10 +274,23 @@ export function Dergo24App() {
     setBookingLoading(true);
     setBookingError('');
     try {
+      const payload = {
+        ...form,
+        senderName: form.senderName.trim(),
+        senderPhone: form.senderPhone.trim(),
+        recipientName: form.recipientName.trim(),
+        recipientPhone: form.recipientPhone.trim(),
+        pickupCity: form.pickupCity.trim(),
+        deliveryCity: form.deliveryCity.trim(),
+        address: form.address.trim(),
+        weight: Number(form.weight) || 1,
+        codAmount: Number(form.codAmount) || 0,
+        pickupPointId: form.pickupPointId || null,
+      };
       const response = await fetch('/api/shipments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, weight: Number(form.weight), codAmount: Number(form.codAmount), pickupPointId: form.pickupPointId || null }),
+        body: JSON.stringify(payload),
       });
       const data = (await response.json()) as BookingResult & {
         error?: string;

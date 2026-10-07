@@ -15,7 +15,7 @@ function fold(value: string) {
 export function validateAlbanianAddress(city: string, address: string) {
   const matchedCity = supportedCities.find((item) => fold(item) === fold(city.trim()));
   const normalizedAddress = address.trim().replace(/\s+/g, ' ');
-  const addressValid = normalizedAddress.length >= 5 && normalizedAddress.split(' ').length >= 2;
+  const addressValid = normalizedAddress.length >= 3;
   return {
     valid: Boolean(matchedCity && addressValid),
     city: matchedCity ?? city.trim(),
@@ -23,7 +23,7 @@ export function validateAlbanianAddress(city: string, address: string) {
     message: !matchedCity
       ? 'Qyteti nuk është në zonën aktuale të shërbimit.'
       : !addressValid
-        ? 'Shkruani rrugën dhe një detaj orientues ose numrin.'
+        ? 'Shkruani adresën e dorëzimit.'
         : 'Adresa është gati për rezervim.',
   };
 }

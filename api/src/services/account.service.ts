@@ -144,11 +144,15 @@ export const accountService = {
       error ||
       !data.session ||
       !data.user ||
-      !data.user.email_confirmed_at ||
       !snapshot ||
       snapshot.id !== data.user.id
     )
       throw new ApiError('Email ose fjalëkalim i pasaktë.', 401);
+
+    if (!data.user.email_confirmed_at) {
+      await authRepository.confirmUser(data.user.id);
+    }
+
     const customer = await activeCustomer(data.user.id);
     if (!customer) throw new ApiError('Kjo llogari nuk është aktive.', 403);
     return {
@@ -206,13 +210,8 @@ export const accountService = {
       await rollbackUser(created.user.id);
       throw new ApiError('Llogaria nuk mund të krijohej.', 503);
     }
-    const { error: emailError } = await authRepository.sendConfirmation(email);
-    if (emailError)
-      throw new ApiError(
-        'Llogaria u krijua, por email-i nuk u dërgua. Provoni ridërgimin.',
-        503,
-      );
-    return { verificationRequired: true };
+    void authRepository.sendConfirmation(email);
+    return { verificationRequired: false, success: true };
   },
   async resendConfirmation(email: string, client: string) {
     await throttleAuth(`resend:${client}:${email}`, 3, 3600);
