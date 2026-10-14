@@ -25,7 +25,7 @@ export function LegalPage({ eyebrow, title, intro, children }: { eyebrow: string
       </article>
       <footer className="bg-[#071b33] px-5 py-10 text-sm text-slate-300">
         <div className="mx-auto flex max-w-4xl flex-col justify-between gap-5 sm:flex-row">
-          <p>Dergo24 · Rruga Mikel Maruli, pranë Cassa Italia, Tiranë</p>
+          <p>Dergo24 · Rruga Mikel Maruli, pranë Casa Italia, Tiranë</p>
           <div className="flex flex-wrap gap-4"><Link href="/terms">Kushtet</Link><Link href="/privacy">Privatësia</Link><Link href="/claims-policy">Ankesat</Link></div>
         </div>
       </footer>

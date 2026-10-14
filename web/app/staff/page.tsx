@@ -586,7 +586,7 @@ function LoginScreen({
           </p>
         </div>
         <p className="text-sm text-slate-500">
-          Rruga Mikel Maruli, pranë Cassa Italia, Tiranë
+          Rruga Mikel Maruli, pranë Casa Italia, Tiranë
         </p>
       </section>
       <section className="premium-auth-surface grid min-h-screen place-items-center px-5 py-12 lg:rounded-l-[3rem]">

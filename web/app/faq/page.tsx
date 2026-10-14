@@ -22,7 +22,7 @@ export default function FAQPage() {
     },
     {
       q: 'A duhet ta çoj unë pakon diku, apo vjen korrieri te dera ime?',
-      a: 'Korrieri vjen direkt në adresën tuaj (shtëpi, zyrë, magazinë ose dyqan) për ta tërhequr pakon falas. Gjithashtu, nëse dëshironi, mund ta dorëzoni ose ta tërhiqni vetë në një nga Pikat Dërgo24.',
+      a: 'Korrieri vjen direkt në adresën tuaj (shtëpi, zyrë, magazinë ose dyqan) për ta tërhequr pakon falas kudo në Shqipëri. Gjithashtu, mund ta dorëzoni ose ta tërhiqni vetë pranë Terminalit tonë Qendror te Casa Italia në Tiranë.',
     },
     {
       q: 'Si mund ta gjurmoj pakon time në kohë reale?',
@@ -56,7 +56,7 @@ export default function FAQPage() {
       <section className="mt-8">
         <h2>Keni pyetje të tjera?</h2>
         <p>
-          Ekipi ynë i shërbimit të klientit është në dispozicionin tuaj çdo ditë nga ora 08:00 deri në 20:00. Na telefononi në <a href="tel:+355692424024">+355 69 24 24 024</a> ose na shkruani në <a href="mailto:info@dergo24.com">info@dergo24.com</a>.
+          Ekipi ynë i shërbimit të klientit është në dispozicionin tuaj çdo ditë nga ora 08:00 deri në 20:00. Na telefononi në <a href="tel:+355698012388">+355 69 801 2388</a> ose na shkruani në <a href="mailto:info@dergo24.com">info@dergo24.com</a>.
         </p>
       </section>
     </LegalPage>

@@ -61,7 +61,7 @@ export default function AboutPage() {
       <section>
         <h2>Infrastruktura dhe Flota</h2>
         <p>
-          Dërgo24 disponon një flotë të zgjeruar furgonësh modernë dhe automjetesh elektrike për shpërndarje urbane, të pajisura me GPS telematikë. Terminali ynë qendror në Tiranë shërben si pikë kryesore nyjeje e lidhur me qendrat rajonale në Durrës, Shkodër, Vlorë, Fier, Elbasan dhe Korçë.
+          Dërgo24 disponon një flotë të zgjeruar furgonësh modernë dhe automjetesh elektrike për shpërndarje urbane, të pajisura me GPS telematikë. Terminali ynë qendror pranë Casa Italia në Tiranë shërben si qendër kryesore operacionale nga ku koordinohet shpërndarja derë më derë në të 61 bashkitë e Shqipërisë.
         </p>
       </section>
 

@@ -73,7 +73,7 @@ export default function PricingPage() {
           Dyqanet online dhe bizneset që dërgojnë mbi 50 pako në muaj përfitojnë tarifa të dedikuara me zbritje deri në 30%, faturë tatimore mujore, menaxher llogarie dhe platformë të dedikuar raportimi.
         </p>
         <p>
-          Kontaktoni departamentin tregtar në <Link href="/b2b">Dërgo24 për Biznese</Link> ose telefononi në <a href="tel:+355692424024">+355 69 24 24 024</a>.
+          Kontaktoni departamentin tregtar në <Link href="/b2b">Dërgo24 për Biznese</Link> ose telefononi në <a href="tel:+355698012388">+355 69 801 2388</a>.
         </p>
       </section>
     </LegalPage>

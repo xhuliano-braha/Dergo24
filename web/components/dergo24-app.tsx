@@ -35,85 +35,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CopyTrackingButton } from '@/components/copy-tracking-button';
 
-const hubLocations = [
-  {
-    city: 'Tiranë',
-    tag: 'HQ & Terminali Qendror',
-    title: 'Terminali Qendror Logjistik Tiranë',
-    address: 'Rruga Mikel Maruli, pranë Cassa Italia, Tiranë',
-    hours: 'Hënë – Shtunë: 08:00 – 20:00 · Diel: 09:00 – 15:00',
-    phone: '+355 69 24 24 024',
-    status: 'Hapur sot deri në 20:00',
-    services: ['Terminal Qendror', 'Tërheqje & Dorëzim', 'Drop-off E-Commerce', 'Shërbim Express', 'Pagesa POS & CASH'],
-    mapsQuery: 'Rruga+Mikel+Maruli,+Tirana,+Albania',
-  },
-  {
-    city: 'Durrës',
-    tag: 'Hub Portual',
-    title: 'Qendra Logjistike Durrës',
-    address: 'Bulevardi Dyrrah & Rruga Pavarësia, Durrës',
-    hours: 'Hënë – Shtunë: 08:30 – 19:30',
-    phone: '+355 69 24 24 025',
-    status: 'Hapur sot deri në 19:30',
-    services: ['Tërheqje Pakosh', 'Dorëzim Dyqanesh', 'Shërbim COD'],
-    mapsQuery: 'Bulevardi+Dyrrah,+Durres,+Albania',
-  },
-  {
-    city: 'Vlorë',
-    tag: 'Hub Rajonal Jugor',
-    title: 'Qendra Logjistike Vlorë',
-    address: 'Bulevardi Ismail Qemali, Sheshi i Flamurit, Vlorë',
-    hours: 'Hënë – Shtunë: 08:30 – 19:00',
-    phone: '+355 69 24 24 026',
-    status: 'Hapur sot deri në 19:00',
-    services: ['Shpërndarje Rajonale', 'Tërheqje Pakosh', 'Pagesa COD'],
-    mapsQuery: 'Bulevardi+Ismail+Qemali,+Vlore,+Albania',
-  },
-  {
-    city: 'Shkodër',
-    tag: 'Hub Rajonal Verior',
-    title: 'Qendra Logjistike Shkodër',
-    address: 'Rruga 13 Dhjetori, Pedonale, Shkodër',
-    hours: 'Hënë – Shtunë: 08:30 – 19:00',
-    phone: '+355 69 24 24 027',
-    status: 'Hapur sot deri në 19:00',
-    services: ['Shpërndarje Veriore', 'Tërheqje Pakosh', 'Pagesa COD'],
-    mapsQuery: 'Rruga+13+Dhjetori,+Shkoder,+Albania',
-  },
-  {
-    city: 'Elbasan',
-    tag: 'Pika Tregtare',
-    title: 'Qendra Logjistike Elbasan',
-    address: 'Bulevardi Qemal Stafa, Qendër, Elbasan',
-    hours: 'Hënë – Shtunë: 08:30 – 18:30',
-    phone: '+355 69 24 24 028',
-    status: 'Hapur sot deri në 18:30',
-    services: ['Tërheqje Pakosh', 'Dorëzim Ekspres'],
-    mapsQuery: 'Bulevardi+Qemal+Stafa,+Elbasan,+Albania',
-  },
-  {
-    city: 'Fier',
-    tag: 'Pika Rajonale',
-    title: 'Qendra Logjistike Fier',
-    address: 'Rruga Kastriot Muho, Fier',
-    hours: 'Hënë – Shtunë: 08:30 – 19:00',
-    phone: '+355 69 24 24 029',
-    status: 'Hapur sot deri në 19:00',
-    services: ['Tërheqje Pakosh', 'Pagesa COD'],
-    mapsQuery: 'Rruga+Kastriot+Muho,+Fier,+Albania',
-  },
-  {
-    city: 'Korçë',
-    tag: 'Hub Rajonal Lindor',
-    title: 'Qendra Logjistike Korçë',
-    address: 'Bulevardi Fan Noli, Korçë',
-    hours: 'Hënë – Shtunë: 08:30 – 18:00',
-    phone: '+355 69 24 24 030',
-    status: 'Hapur sot deri në 18:00',
-    services: ['Tërheqje Pakosh', 'Dorëzim Ekspres'],
-    mapsQuery: 'Bulevardi+Fan+Noli,+Korce,+Albania',
-  },
-];
 
 const homeFaqs = [
   {
@@ -126,7 +47,7 @@ const homeFaqs = [
   },
   {
     question: 'A vjen korrieri te dera ime apo duhet ta dërgoj vetë?',
-    answer: 'Marrja e pakos në adresën tuaj (shtëpi, dyqan, zyrë apo magazinë) është plotësisht FALAS për çdo rezervim online. Gjithashtu, mund të përdorni edhe një nga 7 Pikat tona Logjistike.',
+    answer: 'Marrja e pakos në adresën tuaj (shtëpi, dyqan, zyrë apo magazinë) është plotësisht FALAS për çdo rezervim online në të gjithë Shqipërinë. Gjithashtu, mund ta sillni ose tërhiqni vetë pakon direkt pranë Terminalit tonë Qendror te Casa Italia në Tiranë.',
   },
   {
     question: 'Sa vonon dërgesa deri në mbërritje?',
@@ -294,7 +215,6 @@ export function Dergo24App() {
   const [quoteError, setQuoteError] = useState('');
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; fullName: string; email: string; phone?: string } | null>(null);
-  const [activeHub, setActiveHub] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [calcPickup, setCalcPickup] = useState('Tiranë');
   const [calcDelivery, setCalcDelivery] = useState('Durrës');
@@ -563,10 +483,10 @@ export function Dergo24App() {
               </span>
             </div>
             <div className="flex items-center gap-4 text-[11px] font-semibold text-white/70">
-              <Link href="/pikat" className="hover:text-white transition-colors">📍 7 Qendra Logjistike</Link>
+              <Link href="/pikat" className="hover:text-white transition-colors">📍 Casa Italia, Tiranë</Link>
               <span className="text-white/20">·</span>
-              <a href="tel:+355692424024" className="flex items-center gap-1 text-orange-400 hover:text-orange-300 transition-colors">
-                <Phone className="size-3" /> +355 69 24 24 024
+              <a href="tel:+355698012388" className="flex items-center gap-1 text-orange-400 hover:text-orange-300 transition-colors">
+                <Phone className="size-3" /> +355 69 801 2388
               </a>
             </div>
           </div>
@@ -1648,80 +1568,121 @@ export function Dergo24App() {
       <section id="harta" className="mx-auto max-w-7xl px-5 py-24 lg:px-8 bg-slate-50/70 border-y border-slate-200">
         <div data-reveal>
           <SectionTitle
-            eyebrow="Rrjeti & Qendrat Tona"
-            title="Pikat Logjistike dhe Harta e Vendndodhjes."
-            copy="7 qendra kryesore në Shqipëri për marrje pakosh, drop-off ekspres dhe shërbim të menjëhershëm me orare të zgjatura."
+            eyebrow="Vendndodhja & Harta"
+            title="Terminali Qendror — Casa Italia, Tiranë."
+            copy="Pika jonë kryesore operacionale në Tiranë për marrje pakosh, drop-off ekspres dhe shërbim të menjëhershëm. Nga ky terminal mbulojmë me dërgesa derë më derë të gjithë Shqipërinë!"
           />
         </div>
 
         <div className="mt-12 grid gap-8 lg:grid-cols-[1fr_1.1fr]">
-          {/* Hubs Selector */}
-          <div className="space-y-3">
-            <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
-              Zgjidhni qendrën më të afërt:
-            </p>
-            {hubLocations.map((hub, index) => {
-              const isSelected = activeHub === index;
-              return (
-                <button
-                  key={hub.city}
-                  type="button"
-                  onClick={() => setActiveHub(index)}
-                  className={`w-full text-left rounded-2xl p-4 transition-all duration-200 border ${
-                    isSelected
-                      ? 'border-orange-500 bg-orange-50/80 shadow-md ring-1 ring-orange-500'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`grid size-7 place-items-center rounded-lg text-xs font-black ${
-                        isSelected ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {index + 1}
-                      </span>
-                      <p className="font-black text-slate-900">{hub.title}</p>
-                    </div>
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
-                      {hub.city}
-                    </span>
-                  </div>
+          {/* Hub Info Card on Left */}
+          <div className="flex flex-col justify-between rounded-3xl border border-slate-200 bg-white p-7 shadow-xl">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-700">
+                  HQ · Pika e Vetme Operacionale
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Hapur sot deri në 20:00
+                </span>
+              </div>
 
-                  {isSelected && (
-                    <div className="mt-3.5 space-y-2 border-t border-orange-200/60 pt-3 text-xs text-slate-600 animate-in fade-in duration-200">
-                      <p className="font-semibold text-slate-800">📍 {hub.address}</p>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1">
-                        <span>🕒 {hub.hours}</span>
-                        <span>📞 {hub.phone}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 pt-1.5">
-                        {hub.services.map((srv) => (
-                          <span key={srv} className="rounded bg-white/90 border border-orange-200 px-2 py-0.5 text-[10px] font-semibold text-orange-900">
-                            {srv}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
+              <h3 className="mt-4 text-2xl font-black text-slate-900">
+                Terminali Qendror — Casa Italia
+              </h3>
+              <p className="mt-2 text-sm font-semibold text-slate-700 flex items-start gap-2">
+                <span className="text-orange-500 text-base">📍</span>
+                <span>Rruga Mikel Maruli, pranë Casa Italia, Tiranë</span>
+              </p>
+
+              <div className="mt-6 space-y-3 rounded-2xl bg-slate-50 p-4 text-xs text-slate-600 border border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800">🕒 Oraret:</span>
+                  <span>Hënë – Shtunë: 08:00 – 20:00 · Diel: 09:00 – 15:00</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800">📞 Telefon:</span>
+                  <a href="tel:+355698012388" className="font-bold text-orange-600 hover:underline">
+                    +355 69 801 2388
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800">✉️ Email:</span>
+                  <a href="mailto:info@dergo24.com" className="hover:underline font-medium">
+                    info@dergo24.com
+                  </a>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-2.5">
+                  Shërbimet e disponueshme në pikë:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Tërheqje & Dorëzim Pakosh',
+                    'Drop-off E-Commerce',
+                    'Pagesa POS & CASH',
+                    'Shërbim Express 24h',
+                    'Paketim i Sigurt',
+                  ].map((srv) => (
+                    <span
+                      key={srv}
+                      className="rounded-lg bg-orange-50 border border-orange-200/80 px-2.5 py-1 text-xs font-semibold text-orange-900"
+                    >
+                      {srv}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Nationwide Delivery Notice */}
+            <div className="mt-6 rounded-2xl bg-gradient-to-br from-[#071b38] to-[#0c2e5c] p-5 text-white">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🚚</span>
+                <div>
+                  <p className="text-xs font-black text-amber-400 uppercase tracking-wide">
+                    Mbulim Kombëtar në 61 Bashki
+                  </p>
+                  <p className="mt-1 text-xs text-white/80 leading-relaxed">
+                    Edhe pse pika jonë pritëse për momentin ndodhet te Casa Italia në Tiranë, korrierët tanë vijnë direkt te dera juaj për marrje dhe dorëzim në çdo qytet brenda 24 orëve!
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBookingOpen(true)}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-orange-500 px-3.5 py-1.5 text-xs font-black text-white hover:bg-orange-600 transition shadow"
+                    >
+                      Rezervo Marrje te Dera <ArrowRight className="size-3.5" />
+                    </button>
+                    <a
+                      href="tel:+355698012388"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/20 transition"
+                    >
+                      <Phone className="size-3" /> 069 801 2388
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Interactive Map & Direct Actions */}
+          {/* Interactive Map on Right */}
           <div className="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-xl">
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-800">
                   <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                  {hubLocations[activeHub].status}
+                  Hapur sot deri në 20:00
                 </span>
                 <h3 className="mt-2 text-xl font-black text-slate-900">
-                  {hubLocations[activeHub].title}
+                  Terminali Qendror — Casa Italia, Tiranë
                 </h3>
               </div>
               <a
-                href={`https://maps.google.com/?q=${hubLocations[activeHub].mapsQuery}`}
+                href="https://maps.google.com/?q=Casa+Italia,+Tirana,+Albania"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-xs font-black text-white shadow-md hover:bg-orange-600 transition"
@@ -1731,29 +1692,29 @@ export function Dergo24App() {
             </div>
 
             {/* Map Frame */}
-            <div className="relative mt-4 flex-1 overflow-hidden rounded-2xl border border-slate-200 min-h-[360px] bg-slate-100">
+            <div className="relative mt-4 flex-1 overflow-hidden rounded-2xl border border-slate-200 min-h-[380px] bg-slate-100">
               <iframe
-                src={`https://maps.google.com/maps?q=${hubLocations[activeHub].mapsQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                src="https://maps.google.com/maps?q=Casa+Italia,+Tirana,+Albania&t=&z=15&ie=UTF8&iwloc=&output=embed"
                 width="100%"
                 height="100%"
-                className="size-full min-h-[360px] border-0"
+                className="size-full min-h-[380px] border-0"
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title={`Harta ${hubLocations[activeHub].title}`}
+                title="Harta Terminali Qendror Casa Italia Tirane"
               />
               <div className="pointer-events-none absolute bottom-3 left-3 rounded-xl bg-[#071b38]/90 px-3.5 py-2 text-white text-xs backdrop-blur-md border border-white/20">
-                <p className="font-black">Dërgo24 {hubLocations[activeHub].city}</p>
-                <p className="text-white/70 text-[11px]">{hubLocations[activeHub].address}</p>
+                <p className="font-black">Dërgo24 — Casa Italia, Tiranë</p>
+                <p className="text-white/70 text-[11px]">Rruga Mikel Maruli, pranë Casa Italia</p>
               </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-              <span className="flex items-center gap-1.5 font-semibold">
-                <Headphones className="size-3.5 text-orange-500" /> Asistencë në pikë: {hubLocations[activeHub].phone}
-              </span>
+              <a href="tel:+355698012388" className="flex items-center gap-1.5 font-semibold text-slate-700 hover:text-orange-600">
+                <Headphones className="size-3.5 text-orange-500" /> Asistencë në pikë: +355 69 801 2388
+              </a>
               <Link href="/pikat" className="font-bold text-orange-600 hover:underline">
-                Shiko të gjitha pikat ↗
+                Më shumë mbi pikën tonë ↗
               </Link>
             </div>
           </div>
@@ -1905,11 +1866,11 @@ export function Dergo24App() {
               <div className="mt-4 space-y-3 text-sm text-white/60">
                 <p className="font-semibold text-white">📍 Terminali Qendror (HQ):</p>
                 <p className="text-xs text-white/50 leading-relaxed">
-                  Rruga Mikel Maruli, pranë Cassa Italia, Tiranë, Shqipëri
+                  Rruga Mikel Maruli, pranë Casa Italia, Tiranë, Shqipëri
                 </p>
 
                 <p className="font-semibold text-white pt-2">📞 Telefon & WhatsApp:</p>
-                <p><a href="tel:+355692424024" className="font-bold text-orange-400 hover:underline">+355 69 24 24 024</a></p>
+                <p><a href="tel:+355698012388" className="font-bold text-orange-400 hover:underline">+355 69 801 2388</a></p>
 
                 <p className="font-semibold text-white pt-2">✉️ Email zyrtar:</p>
                 <p><a href="mailto:info@dergo24.com" className="hover:text-white transition">info@dergo24.com</a></p>

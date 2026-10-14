@@ -80,7 +80,7 @@ export default function B2BPage() {
       <section>
         <h2>Si të Filloni?</h2>
         <p>
-          Plotësoni të dhënat tuaja të biznesit duke na kontaktuar në <a href="mailto:biznes@dergo24.com">biznes@dergo24.com</a> ose telefononi drejtpërdrejt departamentin tonë komercial në <a href="tel:+355692424024">+355 69 24 24 024</a>. Kontrata aktivizohet brenda ditës!
+          Plotësoni të dhënat tuaja të biznesit duke na kontaktuar në <a href="mailto:biznes@dergo24.com">biznes@dergo24.com</a> ose telefononi drejtpërdrejt departamentin tonë komercial në <a href="tel:+355698012388">+355 69 801 2388</a>. Kontrata aktivizohet brenda ditës!
         </p>
         <p>
           Mund të krijoni llogari të menjëhershme në <Link href="/account">Portalin e Klientit</Link> ose të filloni me një dërgesë prove nga <Link href="/">Faqja Kryesore</Link>.
